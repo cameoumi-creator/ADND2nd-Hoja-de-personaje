@@ -1,0 +1,13 @@
+const A = require('./cargar')();
+const reg = A.crearRegistro();
+const pj = A.nuevoPersonaje();
+pj.caracteristicas.FUE = '17'; pj.caracteristicas.CON = '16';
+pj.raza.id = 'enano';
+pj.clases[0].xp = 4500;
+const r = A.reglas.resumen(pj, reg);
+console.log('nivel', r.nivel, '| THAC0', r.thaco.valor, '| PG', r.pg.max);
+console.log('salvaciones', r.salvaciones.map(s => s.id + ':' + s.valor).join(' '));
+console.log('FUE', r.car.FUE.total, 'CON', r.car.CON.total, 'CA', r.ca.valor);
+console.log('pericias', r.pericias.totalPA, r.pericias.totalPNA);
+console.log('avisos', r.avisos);
+console.log('razas', reg.razas.length, 'clases', reg.clases.length, 'avisos registro', reg.avisos);
