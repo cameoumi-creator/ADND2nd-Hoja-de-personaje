@@ -173,3 +173,6 @@ ADND.base.razas = [
     elecciones: []
   }
 ];
+
+/* Movimiento base por raza (se puede sobreescribir con el campo mov de una raza homebrew). */
+ADND.base.movRaza = { humano: 12, elfo: 12, semielfo: 12, enano: 6, gnomo: 6, mediano: 6, orco: 12, semiorco: 12, semihumano: 12, tiefling: 12, goliath: 12 };

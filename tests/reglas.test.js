@@ -47,8 +47,8 @@ igual('ego', r.ego, 14 + 12 + r.nivel);
   igual('idiomas: total por INT', r2.idiomas.total, 4);
   pj.idiomas.aprendidos = ['elfico', 'enano']; pj.pericias.flex.pa = 1;
   r2 = A.reglas.resumen(pj, reg);
-  igual('idiomas: libres', r2.idiomas.libres, 1);
-  pj.idiomas.aprendidos = ['elfico', 'enano', 'orco', 'goblin'];
+  igual('idiomas: libres (independientes de las flexibles)', [r2.idiomas.libres, r2.pericias.flexLibre], [2, 3]);
+  pj.idiomas.aprendidos = ['elfico', 'enano', 'orco', 'goblin', 'gnomo'];
   igual('idiomas: aviso al pasarse', A.reglas.resumen(pj, reg).avisos.some(a => a.includes('hueco')), true);
   const e = A.nuevoPersonaje(); e.raza.id = 'semielfo';
   igual('idiomas: semielfo', A.reglas.resumen(e, reg).idiomas.nativos.map(x => x.id), ['comun', 'elfico']);
@@ -896,6 +896,87 @@ igual('catálogo: lanza arrojadiza', reg.arma('armas-de-proyectiles-lanza').nomb
     '#tropa_tipo': { value: 'Arqueros' }, '#mas_2_nom': { value: 'Pip' }, '#mas_2_esp': { value: 'Cuervo' }, '#fam_nom': { value: 'Gato' }, '#fam_p3_nom': { value: 'Ver lejos' }, '#apr_1_nom': { value: 'Ana' } } }).personaje;
   igual('migración: historia y compañeros', [m.historia.titulo, m.historia.origen, m.historia.profesion, m.imagenes.retrato, m.companeros.secuito.tipo, m.companeros.secuito.nombre, m.companeros.secuito.seguidores[0].nombre, m.companeros.secuito.seguidores[0].nv, m.companeros.secuito.tropa.tipo, m.companeros.mascotas.length, m.companeros.mascotas[0].nombre, m.companeros.familiar.nombre, m.companeros.familiar.poderes[2].poder, m.companeros.secuito.aprendices[0].nombre],
     ['Sombra', 'Puerto', 'Capitán', 'https://x.y/r.png', 'Tropa (guerrero)', 'Los Lobos', 'Brun', '3', 'Arqueros', 1, 'Pip', 'Gato', 'Ver lejos', 'Ana']);
+}
+
+/* ---------------------------------------------------------------- Regalos de kits */
+{
+  const KR = A.reglas.kit;
+  igual('kit: bono fijo, que crece, desde nivel y tope', [KR.valorBono({ valor: 1 }, 1), KR.valorBono({ valor: 1, cada: 4, paso: 1 }, 1), KR.valorBono({ valor: 1, cada: 4, paso: 1 }, 5), KR.valorBono({ valor: 1, cada: 4, paso: 1 }, 13), KR.valorBono({ valor: 1, cada: 4, paso: 1, tope: 3 }, 20), KR.valorBono({ valor: 2, desde: 5 }, 4), KR.valorBono({ valor: 2, desde: 5 }, 5)], [1, 1, 2, 4, 3, 0, 2]);
+  const kit = A.sanear.kit({ id: 'k-test', nombre: 'Maestro de espadas', clase: 'guerrero', regalos: { armas: ['espadas-ancha'], grupos: ['Hachas'], esp: [{ id: 'espadas-ancha', n: 2 }], espGrupo: [{ grupo: 'Hachas', n: 1 }], noArmas: [{ id: 'trepar', mejoras: 2 }],
+    bonos: [{ aplica: 'grupo:Espadas', stat: 'gac0', valor: 1, cada: 4, paso: 1 }, { aplica: 'arma:espadas-ancha', stat: 'dano', valor: 2 }, { aplica: 'distancia', stat: 'rt', valor: 1 }] } });
+  igual('kit: saneado', [kit.regalos.armas, kit.regalos.bonos.length, kit.regalos.bonos[0].aplica, A.sanear.kit({ nombre: 'x', clase: 'guerrero', regalos: { bonos: [{ aplica: 'raro', stat: 'raro', valor: 99 }], esp: [{ id: 'a', n: 9 }] } }).regalos.bonos[0], A.sanear.kit({ nombre: 'x', regalos: { esp: [{ id: 'a', n: 9 }] } }).regalos.esp[0].n, A.sanear.kit({ nombre: 'x' }).regalos.armas],
+    [['espadas-ancha'], 3, 'grupo:Espadas', { aplica: 'todas', stat: 'gac0', valor: 10, cada: 0, paso: 1, desde: 1, tope: 0 }, 5, []]);
+  const reg2 = A.crearRegistro({ ...A.hbVacio(), kits: [kit] });
+  const mk = (nivelXp, conKit) => { const p = A.nuevoPersonaje(); p.clases[0].clase = 'guerrero'; p.clases[0].modo = 'manual'; p.clases[0].nivel = nivelXp; if (conKit) p.clases[0].kit = kit.id; return p; };
+  const pideInst = p => { A.reglas.armas.acc; const r0 = A.reglas.resumen(p, reg2); p.armas.instancias.push(A.normalizarPersonaje({ armas: { instancias: [{ id: 'i1', base: 'espadas-ancha' }] } }).armas.instancias[0]); return A.reglas.resumen(p, reg2); };
+  const sin = pideInst(mk(5, false)), con = pideInst(mk(5, true));
+  const a0 = sin.armas, a1 = con.armas;
+  igual('kit: competencias y grupos son gratis', [a0.costos.dominio, a1.costos.dominio, a1.dominio.map(d => [d.id, d.kit, d.soloKit, d.efectiva]), a1.grupos.filter(g => g.kit).map(g => [g.grupo, g.comp, g.spec])], [0, 0, [['espadas-ancha', 'Maestro de espadas', true, 2]], [['Hachas', true, 1]]]);
+  igual('kit: el arma queda competente y especializada en la instancia', [a0.instancias[0].estado, a1.instancias[0].estado, a0.instancias[0].sp, a1.instancias[0].sp], ['No profesional', 'Competente', 0, 2]);
+  const g0 = a0.instancias[0], g1 = a1.instancias[0], suma = i => i.partesGac0.reduce((s, x) => s + x.v, 0);
+  igual('kit: GAC0 mejora por competencia, especialización y bono que crece (nivel 5: +2)', [suma(g0) - suma(g1)], [4 + 3 + 2]);
+  igual('kit: el desglose nombra al kit y el daño sube +2 (arma) y +3 (esp. 2)', [g1.partesGac0.some(x => x.et === 'Kit Maestro de espadas' && x.v === -2), g1.partesDano.some(x => x.et === 'Kit Maestro de espadas' && x.v === 2)], [true, true]);
+  igual('kit: bonos que no aplican no cuentan (RT a distancia no toca la espada)', g1.partesRt.some(x => x.et.startsWith('Kit')), false);
+  igual('kit: el bono crece con el nivel', [pideInst(mk(1, true)).armas.instancias[0].partesGac0.find(x => x.et.startsWith('Kit')).v, pideInst(mk(9, true)).armas.instancias[0].partesGac0.find(x => x.et.startsWith('Kit')).v], [-1, -3]);
+  igual('kit: no gasta PA aunque la clase tenga pocos', [a1.costos.total, a1.libres === a0.libres], [0, true]);
+  igual('kit: sin kit no aparece nada', [a0.dominio.length, a0.grupos.filter(g => g.kit).length, a0.ctx.kit.fuentes], [0, 0, []]);
+  const na = (p, id) => A.reglas.resumen(p, reg2).noArmas.lista.find(x => x.id === id);
+  const idp = A.base.pericias.find(x => x.id === 'trepar') ? 'trepar' : A.base.pericias[0].id;
+  kit.regalos.noArmas[0].id = idp; const reg3 = A.crearRegistro({ ...A.hbVacio(), kits: [kit] });
+  const rr = A.reglas.resumen(mk(3, true), reg3), r00 = A.reglas.resumen(mk(3, false), reg3), fila = rr.noArmas.lista.find(x => x.id === idp);
+  igual('kit: pericia sin arma gratis y con mejoras', [!!fila, fila && fila.kit, fila && fila.soloKit, fila && fila.costo, fila && fila.mejorasKit, rr.noArmas.gastado, r00.noArmas.lista.length], [true, 'Maestro de espadas', true, 0, 2, 0, 0]);
+  igual('kit: la pericia anotada por el jugador no cobra el costo inicial', (() => { const p = mk(3, true); A.reglas.noArmas.acc.conceder(p, reg3, idp, 'Kit'); const r1 = A.reglas.resumen(p, reg3); return [r1.noArmas.gastado, r1.noArmas.lista.filter(x => x.id === idp).length]; })(), [0, 1]);
+  igual('kit: en clase dual la clase congelada no aporta', (() => { const p = mk(5, true); p.trayectoria = 'dual'; p.clases[0].estado = 'Congelada'; p.clases.push({ clase: 'guerrero', kit: '', modo: 'manual', nivel: 1, xp: 0, estado: 'Activa' }); return A.reglas.resumen(p, reg2).armas.ctx.kit.fuentes; })(), []);
+  igual('kit: viaja en el paquete', (() => { const hb1 = A.hbVacio(); A.fusionarHb(hb1, JSON.parse(JSON.stringify({ kits: [kit] }))); return hb1.kits[0].regalos.bonos.length; })(), 3);
+}
+
+/* ---------------------------------------------------------------- Poderes de clase, pericias gratis y estilos con niveles gratis */
+{
+  const reg = A.crearRegistro(A.hbVacio());
+  const pj = A.nuevoPersonaje(); pj.clases[0].clase = 'explorador'; pj.clases[0].modo = 'manual'; pj.clases[0].nivel = 3;
+  const r = A.reglas.resumen(pj, reg);
+  const ids = r.noArmas.lista.map(x => [x.id, x.soloKit, x.kit, x.costo]);
+  igual('clase: pericias gratis del explorador (rastreo y supervivencia)', [ids.some(x => x[0] === 'nwp175' && x[1] && x[2] === 'Explorador' && x[3] === 0), ids.some(x => x[0] === 'nwp170'), r.noArmas.gastado], [true, true, 0]);
+  igual('clase: poderes del paladín y druida cargan', [reg.clase('paladin').poderes.length > 5, reg.clase('druida').poderes.some(q => q.nombre === 'Cambio de forma' && q.nivel === 7)], [true, true]);
+  const hb = A.sanear.clase({ nombre: 'X', thaco: 'Luchador', salvaciones: 'Luchador', xp: 'Guerrero', poderes: [{ nombre: ' Ver ', nivel: 99, texto: 't' }, { nombre: '' }], gratis: ['nwp131', 'nwp131', ''] });
+  igual('clase: saneado de poderes y gratis', [hb.poderes, hb.gratis], [[{ nombre: 'Ver', nivel: 30, texto: 't' }], ['nwp131']]);
+  const m = A.nuevoPersonaje(); m.clases[0].clase = 'mago'; m.clases[0].modo = 'manual'; m.clases[0].nivel = 1;
+  igual('clase: el mago sabe leer y escribir gratis', A.reglas.resumen(m, reg).noArmas.lista.some(x => x.id === 'nwp131' && x.soloKit), true);
+  // estilos: niveles gratis no cuestan PA pero sí cuentan
+  const g = A.nuevoPersonaje(); g.clases[0].clase = 'guerrero'; g.clases[0].modo = 'manual'; g.clases[0].nivel = 1;
+  const c0 = A.reglas.resumen(g, reg).armas;
+  g.armas.estiloExtra = { two: 2 };
+  const c1 = A.reglas.resumen(g, reg).armas, est = c1.estilos.find(x => x.id === 'two');
+  igual('estilos: niveles gratis no gastan PA y suben el nivel efectivo', [c1.costos.estilos, c1.libres === c0.libres, est.nivel, est.extra, est.total], [0, true, 0, 2, 2]);
+  g.armas.estiloExtra = { two: 99 };
+  igual('estilos: el nivel efectivo no pasa del máximo', A.reglas.resumen(g, reg).armas.estilos.find(x => x.id === 'two').total, A.reglas.resumen(g, reg).armas.estilos.find(x => x.id === 'two').max);
+  igual('estilos: se conserva al normalizar', A.normalizarPersonaje({ armas: { estiloExtra: { two: 2, x: 0 } } }).armas.estiloExtra, { two: 2 });
+}
+
+/* ---------------------------------------------------------------- Artes marciales: sin PNA se paga con PA */
+{
+  const reg = A.crearRegistro(A.hbVacio()), AM = A.reglas.artes.acc, arte = reg.artes[0].id;
+  const pj = A.nuevoPersonaje(); pj.clases[0].clase = 'guerrero'; pj.clases[0].modo = 'manual'; pj.clases[0].nivel = 1;
+  const sinPna = AM.anadir(pj, reg, 0, arte, 2);
+  igual('artes: sin PNA pero con PA, el arte se paga con PA', [sinPna, A.reglas.artes.gasto(pj, reg)], [null, { costo: 1, pa: 1, pna: 0 }]);
+  igual('artes: sin PNA ni PA se explica', typeof AM.anadir(A.nuevoPersonaje(), reg, 0, arte, 0), 'string');
+  const mov = reg.arte(arte).movs[0].k;
+  igual('artes: el movimiento también se paga con PA', [AM.mov(pj, reg, 0, arte, mov, 1), A.reglas.artes.gasto(pj, reg)], [null, { costo: 2, pa: 2, pna: 0 }]);
+  igual('artes: con PNA disponible se paga con PNA', (() => { const q = A.nuevoPersonaje(); AM.anadir(q, reg, 3, arte, 2); return A.reglas.artes.gasto(q, reg).pna; })(), 1);
+}
+
+/* ---------------------------------------------------------------- Movimiento */
+{
+  const reg = A.crearRegistro(A.hbVacio());
+  const mk = (raza, clase) => { const p = A.nuevoPersonaje(); p.raza.id = raza; p.clases[0].clase = clase; p.clases[0].modo = 'manual'; p.clases[0].nivel = 1; return p; };
+  igual('mov: humano 12, enano 6, bárbaro 18', [A.reglas.resumen(mk('humano', 'guerrero'), reg).mov.valor, A.reglas.resumen(mk('enano', 'guerrero'), reg).mov.valor, A.reglas.resumen(mk('enano', 'barbaro'), reg).mov.valor], [12, 6, 18]);
+  const p = mk('humano', 'guerrero'); p.bonos.mov = [{ origen: 'Botas', valor: 3, nota: '' }];
+  igual('mov: un bono se suma', A.reglas.resumen(p, reg).mov.valor, 15);
+  p.equipo.mochila.items.push({ id: 'x', nombre: 'Yunque', cant: 1, peso: 500, valor: '', estado: 'Mochila' });
+  const r = A.reglas.resumen(p, reg);
+  igual('mov: la carga lo reduce', [r.mov.carga, r.mov.valor], ['Sobrecargado', 5]);
+  igual('mov: raza homebrew con movimiento propio', A.reglas.resumen((() => { const q = mk('humano', 'guerrero'); return q; })(), A.crearRegistro(A.sanear.paquete({ razas: [{ nombre: 'Veloz', mov: 15 }] }))).mov.valor, 12);
+  igual('mov: se sanea', [A.sanear.raza({ nombre: 'V', mov: 15 }).mov, A.sanear.raza({ nombre: 'V' }).mov, A.sanear.clase({ nombre: 'X', mov: 99 }).mov], [15, undefined, 60]);
 }
 
 console.log(`${ok} correctas, ${mal} fallidas`);

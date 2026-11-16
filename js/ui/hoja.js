@@ -50,7 +50,24 @@
       h('p', { class: 'p' }, h('strong', { text: 'Patrimonio conocido: ' }), `${fmt(q.conocido)} mo${q.ingresoMensual || q.gastoMensual ? ` · mensual ${fmt(q.ingresoMensual)} − ${fmt(q.gastoMensual)} = ${fmt(q.netoMensual)} mo` : ''}`));
   }
 
-  ui.hoja = function (S) {
+  /* GAC0 de la hoja: lo natural, FUE, DES a distancia, ambidestría; el estilo va en cada arma. */
+  function gac0Hoja(S) {
+    const r = S.r, f = (c, k) => (r.car[c].fila && r.car[c].fila[k] !== undefined ? A.reglas.formatoFila(r.car[c].fila[k]) : '0');
+    const amb = r.armas && r.armas.dos ? `penalización con dos armas ${r.armas.dos.pa}/${r.armas.dos.pb}` : '';
+    return h('p', { class: 'p', text: `GAC0 natural ${r.thaco.valor} · Fuerza (golpe) ${f('FUE', 'Golpe')} · Destreza (proyectiles) ${f('DES', 'Proyectil')} · Ambidiestría ${r.pericias.ambidestria.activa ? 'sí' : 'no'}${amb ? ' · ' + amb : ''}. El estilo de pelea y la especialización ya están en el GAC0 de cada arma.` });
+  }
+  /* Ranuras de equipo (de la pestaña Armadura): todas, para anotar a mano, o solo las usadas. */
+  function ranurasHoja(S, todas) {
+    const eq = S.pj.armadura.equipo, filas = A.base.ranurasEquipo.map(([k, t]) => ({ t, q: eq[k] || {} })).filter(x => todas || x.q.nombre || x.q.ca || x.q.magico);
+    const r = S.r, piezas = ['torso', 'brazos', 'piernas'].map(k => r.ca.piezas.find(p => p.parte === k)).filter(p => p && p.armadura).map(p => ({ t: { torso: 'Cuerpo', brazos: 'Brazos', piernas: 'Piernas' }[p.parte], n: p.armadura.nombre + (p.magico ? ' +' + p.magico : '') }));
+    const armas = (r.armas ? r.armas.instancias : []).map(x => (x.inst.nombre || (x.arma && x.arma.nombre) || '')).filter(Boolean);
+    return h('table', { class: 'h-tabla h-ranuras' }, h('thead', {}, h('tr', {}, ['Ranura', 'Objeto', 'CA'].map(t => h('th', { text: t })))),
+      h('tbody', {}, piezas.map(x => h('tr', {}, h('th', { text: x.t }), h('td', { text: x.n }), h('td', { text: '' }))),
+        filas.map(x => h('tr', {}, h('th', { text: x.t }), h('td', { text: x.q.nombre || '' }), h('td', { text: x.q.ca || x.q.magico ? U.signo((Number(x.q.ca) || 0) + (Number(x.q.magico) || 0)) : '' }))),
+        todas ? [h('tr', {}, h('th', { text: 'Arma' }), h('td', { text: armas[0] || '' }), h('td', {})), h('tr', {}, h('th', { text: 'Arma alterna' }), h('td', { text: armas[1] || '' }), h('td', {}))] : null));
+  }
+
+  function hojaPersonaje(S, estilo) {
     const { pj, r, reg } = S;
     const raza = reg.raza(pj.raza.id), variante = raza && raza.variantes.find(v => v.id === pj.raza.variante);
     const clases = (pj.trayectoria === 'unica' ? r.gob : r.items).map(x => `${x.clase.nombre}${x.clase.kit ? ' (' + x.clase.kit.nombre + ')' : ''} ${x.nivel}`).join(pj.trayectoria === 'multi' ? ' / ' : ' → ');
@@ -72,12 +89,12 @@
       h('tbody', {}, r.items.map(x => h('tr', {}, h('td', { text: x.clase.nombre + (x.entrada.estado === 'Congelada' ? ' (congelada)' : '') }), h('td', { text: x.clase.kit ? x.clase.kit.nombre : '—' }),
         h('td', { text: x.nivel }), h('td', { text: x.xpEfectivo.toLocaleString('es-MX') }), h('td', { text: x.xpSiguiente === null ? 'Máx.' : x.xpSiguiente.toLocaleString('es-MX') })))));
 
-    const datosId = [pj.identidad.jugador && 'Jugador: ' + pj.identidad.jugador, deidad && 'Deidad: ' + deidad.nombre, pj.identidad.sexo, pj.identidad.edad && pj.identidad.edad + ' años', pj.identidad.altura, pj.identidad.peso].filter(Boolean).join('  ·  ');
+    const datosId = [pj.identidad.jugador && 'Jugador: ' + pj.identidad.jugador, deidad && 'Deidad: ' + deidad.nombre, pj.identidad.sexo, pj.identidad.edad && pj.identidad.edad + ' años', pj.identidad.altura, pj.identidad.peso, pj.identidad.ojos && 'Ojos: ' + pj.identidad.ojos, pj.identidad.cabello && 'Cabello: ' + pj.identidad.cabello, pj.identidad.piel && 'Piel: ' + pj.identidad.piel].filter(Boolean).join('  ·  ');
     const efectos = r.efectos.filter(e => !A.STATS.includes(e.objetivo) || e.origen === 'Manual');
     const armas = r.armas ? r.armas.instancias : [];
     const tablaArmas = armas.length ? h('table', { class: 'h-tabla' },
-      h('thead', {}, h('tr', {}, ['Arma', 'GAC0', 'Daño P/M', 'Daño G', 'RT', 'Crítico', 'Estilo'].map(t => h('th', { text: t })))),
-      h('tbody', {}, armas.map(x => h('tr', {}, h('td', { text: (x.inst.nombre ? x.inst.nombre + ' — ' : '') + (x.arma ? x.arma.nombre : '?') }), h('td', { class: 'g', text: x.gac0 }), h('td', { text: x.dano.p }), h('td', { text: x.dano.g }), h('td', { text: x.rt }), h('td', { text: x.critico }),
+      h('thead', {}, h('tr', {}, ['Arma', 'GAC0', 'Entrada', 'Daño P/M', 'Daño G', 'RT', 'Crítico', 'Estilo'].map(t => h('th', { text: t })))),
+      h('tbody', {}, armas.map(x => h('tr', {}, h('td', { text: (x.inst.nombre ? x.inst.nombre + ' — ' : '') + (x.arma ? x.arma.nombre : '?') }), h('td', { class: 'g', text: x.gac0 }), h('td', { text: U.signo(x.partesDano.reduce((a, q) => a + q.v, 0)) }), h('td', { text: x.dano.p }), h('td', { text: x.dano.g }), h('td', { text: x.rt }), h('td', { text: x.critico }),
         h('td', { text: (x.opciones.find(o => o[0] === x.estilo) || [0, ''])[1] === 'Ninguno' ? '' : (x.opciones.find(o => o[0] === x.estilo) || [0, ''])[1] }))))) : null;
     const idiomasTxt = [...r.idiomas.nativos.map(x => x.nombre + ' (nativo)'), ...r.idiomas.aprendidos.map(x => x.nombre)].join(', ');
     const notas = ['equipo'].filter(k => pj.notas[k].trim());
@@ -86,7 +103,7 @@
       h('header', { class: 'h-cab' }, pj.imagenes.retrato ? h('img', { class: 'h-retrato', src: pj.imagenes.retrato, alt: '', referrerpolicy: 'no-referrer' }) : null, h('h1', { text: pj.identidad.nombre || 'Sin nombre' }),
         h('p', { text: [raza ? raza.nombre + (variante ? ` (${variante.nombre})` : '') : '', clases, pj.identidad.alineamiento].filter(Boolean).join('  ·  ') })),
       h('div', { class: 'h-fila' },
-        dato('Nivel', r.nivel), dato('THAC0', r.thaco.valor), dato('CA', r.ca.valor), dato('PG', pj.pg.actual === null ? r.pg.max : `${pj.pg.actual} / ${r.pg.max}`)),
+        dato('Nivel', r.nivel), dato('THAC0', r.thaco.valor), dato('CA', r.ca.valor), dato('Mov.', r.mov.valor), dato('PG', pj.pg.actual === null ? r.pg.max : `${pj.pg.actual} / ${r.pg.max}`)),
       h('div', { class: 'h-cols' },
         h('div', {}, h('h2', { text: 'Características' }), caracteristicas, h('p', { class: 'p', text: `Ego ${r.ego}  ·  Belleza ${r.belleza}` })),
         h('div', {}, h('h2', { text: 'Salvaciones' }), salvaciones, ...(datosId ? [h('h2', { text: 'Identidad' }), h('p', { class: 'p', text: datosId }),
@@ -94,7 +111,8 @@
       h('h2', { text: 'Clases' }), clasesTabla,
       h('p', { class: 'p', text: `Pericias disponibles: ${r.pericias.disponiblesPA} de arma, ${r.pericias.disponiblesPNA} sin arma.${pj.pericias.armas.length ? ' Armas: ' + pj.pericias.armas.map(x => x.nombre).filter(Boolean).join(', ') + '.' : ''}${pj.pericias.otras.length ? ' Otras: ' + pj.pericias.otras.map(x => x.nombre).filter(Boolean).join(', ') + '.' : ''}` }),
       idiomasTxt ? h('div', {}, h('h2', { text: 'Idiomas' }), h('p', { class: 'p', text: idiomasTxt })) : null,
-      tablaArmas ? h('div', {}, h('h2', { text: 'Armas' }), tablaArmas) : null,
+      tablaArmas ? h('div', {}, h('h2', { text: 'Armas' }), gac0Hoja(S), tablaArmas) : h('div', {}, h('h2', { text: 'GAC0' }), gac0Hoja(S)),
+      estilo === 'azul' ? h('div', {}, h('h2', { text: 'Objetos equipados' }), ranurasHoja(S, true)) : null,
       r.noArmas.lista.filter(x => x.p).length ? h('div', {}, h('h2', { text: 'Pericias sin arma' }), h('p', { class: 'p', text: r.noArmas.lista.filter(x => x.p).map(x => `${x.p.nombre}${x.objetivo === null ? '' : ' ' + x.objetivo}`).join(' · ') })) : null,
       (r.tecnicas.niveles.ladron || r.tecnicas.niveles.bardo) ? h('div', {}, h('h2', { text: 'Habilidades de bribón' }), h('p', { class: 'p', text: r.tecnicas.habilidades.map(x => `${x.nombre} ${x.total}%`).join(' · ') + (r.tecnicas.clase.ladron ? `  ·  Espalda ×${r.tecnicas.clase.ladron.espalda}, furtivo ${r.tecnicas.clase.ladron.furtivo}` : '') + (r.tecnicas.clase.bardo ? `  ·  Saber legendario ${r.tecnicas.clase.bardo.saber}%` : '') })) : null,
       r.tecnicas.barbaro ? h('div', {}, h('h2', { text: 'Habilidades de bárbaro' }), h('p', { class: 'p', text: r.tecnicas.barbaro.filas.map(f => `${f.nombre} ${f.total}`).join(' · ') })) : null,
@@ -152,11 +170,63 @@
         ['torso', 'brazos', 'piernas'].map(k => r.ca.piezas.find(p => p.parte === k)).filter(p => p.armadura).map(p => `${{ torso: 'Peto', brazos: 'Brazos', piernas: 'Piernas' }[p.parte]}: ${p.armadura.nombre}${p.magico ? ' +' + p.magico : ''}`).join(', '),
         Object.values(pj.armadura.equipo).filter(q => q.nombre || q.ca || q.magico).map(q => `${q.nombre || 'Equipo'}${q.ca || q.magico ? ' (' + U.signo(q.ca + q.magico) + ')' : ''}`).join(', ')].filter(Boolean).join('  ·  ') })),
       raza && (raza.nota || (variante && variante.nota)) ? h('div', {}, h('h2', { text: 'Capacidades de raza' }), h('p', { class: 'p', text: [raza.nota, variante && variante.nota].filter(Boolean).join('\n') })) : null,
+      r.items.some(x => (x.clase.poderes || []).some(q => q.nivel <= x.nivel)) ? h('div', {}, h('h2', { text: 'Poderes de clase' }),
+        r.items.filter(x => (x.clase.poderes || []).some(q => q.nivel <= x.nivel)).map(x => h('div', {}, h('p', { class: 'p' }, h('strong', { text: x.clase.nombre + ' ' + x.nivel })),
+          x.clase.poderes.filter(q => q.nivel <= x.nivel).map(q => h('p', { class: 'p' }, h('strong', { text: q.nombre + '. ' }), q.texto))))) : null,
       r.items.some(x => x.clase.kit && (x.clase.kit.habilidades.length || x.clase.kit.nota)) ? h('div', {}, h('h2', { text: 'Kits' }),
         r.items.filter(x => x.clase.kit).map(x => h('p', { class: 'p' }, h('strong', { text: x.clase.kit.nombre + ': ' }), [x.clase.kit.nota, ...x.clase.kit.habilidades].filter(Boolean).join(' · ')))) : null,
       efectos.length ? h('div', {}, h('h2', { text: 'Bonos y efectos' }), h('p', { class: 'p', text: efectos.map(e => `${e.etiqueta}: ${A.OBJETIVOS[e.objetivo].split(' (')[0]} ${U.signo(e.valor)}`).join('  ·  ') })) : null,
       historiaHoja(S), companerosHoja(S),
       ...notas.map(k => h('div', {}, h('h2', { text: 'Notas de equipo' }), h('p', { class: 'p', text: pj.notas[k] }))));
-    document.getElementById('hoja').replaceChildren(hoja);
+    return hoja;
+  }
+
+  /* Hoja compacta: una sola página con lo esencial de combate. */
+  function hojaCompacta(S) {
+    const { pj, r, reg } = S, raza = reg.raza(pj.raza.id);
+    const clases = r.items.map(x => `${x.clase.nombre} ${x.nivel}`).join(' / ');
+    const dato = (et, v) => h('div', { class: 'h-dato' }, h('span', { text: et }), h('strong', { text: String(v) }));
+    const car = h('table', { class: 'h-tabla' }, h('tbody', {}, A.STATS.map(s => { const c = r.car[s]; return h('tr', {}, h('th', { text: s }), h('td', { class: 'g', text: c.total }),
+      h('td', { class: 'p', text: c.fila ? Object.entries(c.fila).map(([k, v]) => `${k} ${A.reglas.formatoFila(v)}`).join(' · ') : '' })); })));
+    const salv = h('table', { class: 'h-tabla' }, h('tbody', {}, r.salvaciones.map(s => h('tr', {}, h('th', { text: `${s.id} · ${A.SAVE_NOMBRES[s.id]}` }), h('td', { class: 'g', text: s.valor })))));
+    const armas = r.armas ? r.armas.instancias : [];
+    const tabla = h('table', { class: 'h-tabla' }, h('thead', {}, h('tr', {}, ['Arma', 'GAC0', 'Entrada', 'Daño P/M', 'Daño G', 'RT', 'Crítico'].map(t => h('th', { text: t })))),
+      h('tbody', {}, armas.map(x => h('tr', {}, h('td', { text: (x.inst.nombre ? x.inst.nombre + ' — ' : '') + (x.arma ? x.arma.nombre : '?') }), h('td', { class: 'g', text: x.gac0 }), h('td', { text: U.signo(x.partesDano.reduce((a, q) => a + q.v, 0)) }),
+        h('td', { text: x.dano.p }), h('td', { text: x.dano.g }), h('td', { text: x.rt }), h('td', { text: x.critico })))));
+    const pericias = r.noArmas.lista.filter(x => x.p).map(x => `${x.p.nombre}${x.objetivo === null ? '' : ' ' + x.objetivo}`).join(' · ');
+    return h('div', { class: 'h-pagina' },
+      h('header', { class: 'h-cab' }, pj.imagenes.retrato ? h('img', { class: 'h-retrato', src: pj.imagenes.retrato, alt: '', referrerpolicy: 'no-referrer' }) : null, h('h1', { text: pj.identidad.nombre || 'Sin nombre' }),
+        h('p', { text: [raza && raza.nombre, clases, pj.identidad.alineamiento].filter(Boolean).join('  ·  ') })),
+      h('div', { class: 'h-fila' }, dato('Nivel', r.nivel), dato('THAC0', r.thaco.valor), dato('CA', r.ca.valor), dato('Toque', r.ca.toque), dato('Mov.', r.mov.valor), dato('PG', pj.pg.actual === null ? r.pg.max : `${pj.pg.actual} / ${r.pg.max}`)),
+      h('div', { class: 'h-cols' }, h('div', {}, h('h2', { text: 'Características' }), car), h('div', {}, h('h2', { text: 'Salvaciones' }), salv, h('h2', { text: 'GAC0' }), gac0Hoja(S))),
+      h('h2', { text: 'Armas' }), tabla,
+      pericias ? h('div', {}, h('h2', { text: 'Pericias sin arma' }), h('p', { class: 'p', text: pericias })) : null,
+      r.items.some(x => (x.clase.poderes || []).some(q => q.nivel <= x.nivel)) ? h('div', {}, h('h2', { text: 'Poderes de clase' }), h('p', { class: 'p', text: r.items.flatMap(x => x.clase.poderes.filter(q => q.nivel <= x.nivel).map(q => q.nombre)).join(' · ') })) : null);
+  }
+
+  const OPC0 = { doc: 'personaje', estilo: 'clasica', ahorro: false };
+  ui.hojaOpc = () => Object.assign({}, OPC0, A.almacen.pref('hoja', {}));
+  /* Diálogo previo a imprimir: qué hoja, con qué estilo y si se ahorra tinta. */
+  ui.dialogoImpresion = function (S) {
+    const o = ui.hojaOpc(), guardar = () => A.almacen.fijarPref('hoja', o);
+    const grupo = (nombre, clave, ops) => h('fieldset', { class: 'imp-grupo' }, h('legend', { text: nombre }),
+      ops.map(([v, t, d]) => h('label', { class: 'imp-op' }, h('input', { type: 'radio', name: 'imp-' + clave, value: v, checked: o[clave] === v ? true : null, 'data-foco': `imp-${clave}-${v}`, onchange: () => { o[clave] = v; guardar(); } }), h('span', {}, h('strong', { text: t }), d ? h('small', { text: d }) : null))));
+    const dlg = h('dialog', { class: 'imp', 'aria-label': 'Imprimir' },
+      h('h2', { text: 'Imprimir' }),
+      grupo('Qué imprimir', 'doc', [['personaje', 'Hoja de personaje'], ['conjuros', 'Hoja de conjuros', 'Una página por clase lanzadora, para llenar a mano'], ['ambos', 'Las dos']]),
+      grupo('Estilo de la hoja', 'estilo', [['clasica', 'Clásica', 'Texto y tablas, sin adornos'], ['azul', 'Azul ornamentada', 'Marcos y bandas azules sobre papel casi blanco'], ['compacta', 'Compacta', 'Una página con lo esencial de combate']]),
+      h('label', { class: 'imp-op' }, h('input', { type: 'checkbox', checked: o.ahorro ? true : null, 'data-foco': 'imp-ahorro', onchange: e => { o.ahorro = e.target.checked; guardar(); } }), h('span', {}, h('strong', { text: 'Ahorrar tinta' }), h('small', { text: 'Sin bandas de color: solo líneas finas' }))),
+      h('div', { class: 'imp-acc' }, ui.boton('Cancelar', () => dlg.close()), ui.boton('Imprimir', () => { dlg.close(); ui.hoja(S); window.print(); }, 'primario', { 'data-foco': 'imp-ok' })));
+    dlg.addEventListener('close', () => dlg.remove());
+    document.body.append(dlg);
+    if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
+  };
+  ui.hoja = function (S) {
+    const o = ui.hojaOpc(), paginas = [];
+    if (o.doc !== 'conjuros') paginas.push(o.estilo === 'compacta' ? hojaCompacta(S) : hojaPersonaje(S, o.estilo));
+    if (o.doc !== 'personaje' && ui.hojaConjuros) paginas.push(...ui.hojaConjuros(S));
+    const el = document.getElementById('hoja');
+    el.className = `h-${o.estilo}${o.ahorro ? ' h-ahorro' : ''}`;
+    el.replaceChildren(...paginas.filter(Boolean));
   };
 })(window.ADND);

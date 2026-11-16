@@ -24,7 +24,7 @@
     thaco: 'THAC0 (se suma; negativo mejora)', ca: 'Clase de armadura (se suma; negativo mejora)', pg: 'Puntos de golpe máximos',
     PVM: 'Salvación PVM (se suma; negativo mejora)', CVV: 'Salvación CVV (se suma; negativo mejora)',
     PP: 'Salvación PP (se suma; negativo mejora)', AL: 'Salvación AL (se suma; negativo mejora)',
-    CyO: 'Salvación CyO (se suma; negativo mejora)'
+    CyO: 'Salvación CyO (se suma; negativo mejora)', mov: 'Movimiento (se suma)'
   };
 
   const U = A.util;

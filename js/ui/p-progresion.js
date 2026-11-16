@@ -117,7 +117,7 @@
       m.pa.textContent = q.disponiblesPA; m.pna.textContent = q.disponiblesPNA;
       m.pad.textContent = `clase ${q.pa} (${q.fuentePA}) + flexibles ${q.flexPA} − ambidestría ${q.comprometidoPA} − anotadas ${q.gastadoPA}`;
       m.pnad.textContent = `clase ${q.pna} (${q.fuentePNA}) + flexibles ${q.flexPNA} − ambidestría ${q.comprometidoPNA} − anotadas ${q.gastadoPNA}`;
-      m.flex.textContent = q.flex; m.libre.textContent = q.flexLibre; m.libre.title = `Ya descontados ${q.idiomasUsados} idioma(s) aprendido(s)`;
+      m.flex.textContent = q.flex; m.libre.textContent = q.flexLibre; m.libre.title = 'Los idiomas aprendidos tienen su propio cupo: no se descuentan aquí';
       m.ambi.textContent = q.ambidestria.gratis ? `Gratis por ${q.ambidestria.origen}` : (q.ambidestria.activa ? `Consume 1 ${q.ambidestria.reserva}` : 'No comprada');
     });
     return ui.bloque('Pericias',

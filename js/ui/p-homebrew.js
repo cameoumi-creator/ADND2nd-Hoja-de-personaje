@@ -32,6 +32,17 @@
   ];
   const TABLAS = { thaco: 'THAC0 por nivel', salvaciones: 'Salvaciones por nivel', xp: 'PX por nivel' };
 
+  /* Familias: la barra fija deja ver solo una parte de las categorías a la vez. */
+  const FAMILIAS = [
+    { id: 'personaje', t: 'Personaje', tipos: ['raza', 'variante', 'clase', 'kit', 'deidad', 'idioma'] },
+    { id: 'combate', t: 'Combate', tipos: ['arma', 'armadura', 'escuela', 'arte', 'creacion'] },
+    { id: 'magia', t: 'Magia', tipos: ['conjuro', 'escuelaMagia', 'linaje', 'pacto'] },
+    { id: 'psionica', t: 'Psiónica', tipos: ['poderPsi', 'disciplinaPsi', 'defensaPsi'] },
+    { id: 'opcionales', t: 'Reglas opcionales', tipos: ['dote', 'dotesNacimiento', 'magiaSalvaje'] },
+    { id: 'equipo', t: 'Equipo y otros', tipos: ['objetoTienda', 'pericia', 'tabla'] }
+  ];
+  const familiaDe = tipo => (FAMILIAS.find(f => f.tipos.includes(tipo)) || FAMILIAS[0]).id;
+  let familia = 'personaje';
   let sel = null;            // { tipo, id, borrador, lectura }
   const filtroBase = {};            // búsqueda dentro de listas base largas (conjuros)
   const baseAbiertas = new Set();   // grupos "Base" que dejaste abiertos
@@ -188,7 +199,7 @@
     });
     if (typeof b._eleccionesTexto !== 'string') b._eleccionesTexto = JSON.stringify(b.elecciones || [], null, 2);
     return [
-      h('div', { class: 'rejilla g3' }, nombreCampo(b)), editorMods(b), notaCampo(b), editorIdiomasNativos(S, b), editorEfectos(S, b, 'Efectos de la raza', 'hb-raza'),
+      h('div', { class: 'rejilla g3' }, nombreCampo(b), opcional(b, 'mov', 'Movimiento base (vacío: 12)', { min: 0, max: 60, 'data-foco': 'hb-mov' })), editorMods(b), notaCampo(b), editorIdiomasNativos(S, b), editorEfectos(S, b, 'Efectos de la raza', 'hb-raza'),
       h('h3', { text: 'Variantes' }), variantes, ui.boton('Agregar variante', () => { b.variantes.push({ id: '', nombre: '', mods: {}, nota: '', efectos: [] }); S.render(); }, 'chico'),
       h('details', { class: 'sub' }, h('summary', { text: 'Elecciones del jugador (avanzado, JSON)' }),
         h('p', { class: 'ayuda', text: 'Para razas donde el jugador elige algo (como el semihumano). Cada elección tiene id, etiqueta y opciones con valor, etiqueta y, si quieres, mods o efectos.' }),
@@ -196,12 +207,28 @@
     ];
   }
 
+  /* Poderes (texto) y pericias gratis de una clase. */
+  function poderesYGratis(S, b) {
+    b.poderes = Array.isArray(b.poderes) ? b.poderes : []; b.gratis = Array.isArray(b.gratis) ? b.gratis : [];
+    const filas = b.poderes.map((q, i) => h('div', { class: 'hb-bono' },
+      h('div', { class: 'rejilla g3' }, ui.campo('Poder', ui.texto(q.nombre || '', v => { q.nombre = v; }, { 'data-foco': `hb-pd-${i}-n`, maxlength: 80 })),
+        ui.campo('Desde el nivel', ui.numero(q.nivel || 1, v => { q.nivel = Math.max(1, U.num(v)); }, { min: 1, max: 30, class: 'corto', 'data-foco': `hb-pd-${i}-l` }), 'corto-c')),
+      ui.campo('Descripción', ui.area(q.texto || '', v => { q.texto = v; }, { rows: 3, 'data-foco': `hb-pd-${i}-t` })),
+      ui.boton('Quitar poder', () => { b.poderes.splice(i, 1); S.render(); }, 'chico peligro', { 'data-foco': `hb-pd-${i}-q` })));
+    let nuevoId = '';
+    const opts = [{ v: '', t: 'Elige una pericia…' }].concat(S.reg.pericias.map(x => ({ v: x.id, t: x.nombre })));
+    return [h('h3', { text: 'Poderes de clase (solo texto)' }), h('p', { class: 'ayuda', text: 'Se ven en la pestaña Ficha según el nivel y salen en la hoja impresa.' }),
+      filas.length ? filas : h('p', { class: 'vacio', text: 'Sin poderes.' }), ui.boton('Agregar poder', () => { b.poderes.push({ nombre: '', nivel: 1, texto: '' }); S.render(); }, 'chico', { 'data-foco': 'hb-pd-nuevo' }),
+      h('h3', { text: 'Pericias sin arma gratis' }), h('p', { class: 'ayuda', text: 'No gastan PNA mientras esta clase gobierne al personaje.' }),
+      h('div', { class: 'chips' }, b.gratis.map((id, i) => h('span', { class: 'chip' }, (S.reg.pericia(id) || { nombre: id }).nombre, ' ', h('button', { type: 'button', class: 'chip-x', 'aria-label': 'Quitar', 'data-foco': 'hb-gr-q-' + i, onclick: () => { b.gratis.splice(i, 1); S.render(); } }, '×')))),
+      h('div', { class: 'fila-edit' }, ui.select(opts, '', v => { nuevoId = v; }, { 'data-foco': 'hb-gr-add', 'aria-label': 'Pericia gratis' }), ui.boton('Agregar', () => { if (nuevoId && !b.gratis.includes(nuevoId)) { b.gratis.push(nuevoId); S.render(); } }, 'chico', { 'data-foco': 'hb-gr-btn' }))];
+  }
   function formClase(S, b) {
     b.pericias = b.pericias || {};
     const num = (k, et, extra) => ui.campo(et, ui.numero(b[k] === undefined ? '' : b[k], v => { b[k] = U.num(v); }, Object.assign({ 'data-foco': 'hb-' + k }, extra)));
     const per = (k, et) => ui.campo(et, ui.numero(b.pericias[k] === undefined ? '' : b.pericias[k], v => { b.pericias[k] = U.num(v); }, { min: 0, 'data-foco': 'hb-p-' + k }));
     return [
-      h('div', { class: 'rejilla g3' }, nombreCampo(b)),
+      h('div', { class: 'rejilla g3' }, nombreCampo(b), opcional(b, 'mov', 'Movimiento base de la clase (vacío: el de la raza)', { min: 0, max: 60, 'data-foco': 'hb-mov' })),
       h('h3', { text: 'Tablas que usa' }),
       h('div', { class: 'rejilla g3' },
         ui.campo('THAC0', ui.select(nombresTablas(S, 'thaco'), b.thaco, v => { b.thaco = v; }, { 'data-foco': 'hb-thaco' })),
@@ -216,10 +243,53 @@
       opcional(b, 'espArmas', 'Especialización máxima en armas, 0 a 5 (vacío: según su tabla de THAC0)', { min: 0, max: 5 }),
       h('h3', { text: 'Pericias' }),
       h('div', { class: 'rejilla g4' }, per('pa0', 'De arma al inicio'), per('paCada', 'Una de arma cada N niveles'), per('pna0', 'Sin arma al inicio'), per('pnaCada', 'Una sin arma cada N niveles')),
+      ...poderesYGratis(S, b),
       ui.campo('Ambidestría gratis', h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: !!b.ambidestriaGratis, onchange: e => { if (e.target.checked) b.ambidestriaGratis = true; else delete b.ambidestriaGratis; } }), ' Esta clase no paga la ambidestría'))
     ];
   }
 
+  /* Regalos del kit: todo gratis (sin gastar PA ni PNA). */
+  function regalosKit(S, b) {
+    const r = b.regalos = b.regalos && typeof b.regalos === 'object' ? b.regalos : A.reglas.kit.vacio();
+    ['armas', 'grupos', 'esp', 'espGrupo', 'noArmas', 'bonos'].forEach(k => { if (!Array.isArray(r[k])) r[k] = []; });
+    const armasOp = [{ v: '', t: 'Elige un arma…' }].concat(S.reg.gruposArmas().map(g => ({ grupo: g, items: S.reg.armas.filter(x => x.grupo === g).map(x => ({ v: x.id, t: x.nombre })) })).filter(g => g.items.length));
+    const gruposOp = [{ v: '', t: 'Elige un grupo…' }].concat(S.reg.gruposArmas().map(g => ({ v: g, t: g })));
+    const pericOp = [{ v: '', t: 'Elige una pericia…' }].concat(S.reg.pericias.map(p => ({ v: p.id, t: p.nombre })));
+    const nombreArma = id => (S.reg.arma(id) || { nombre: id + ' (ya no existe)' }).nombre;
+    const quitar = (lista, i, foco) => ui.boton('Quitar', () => { lista.splice(i, 1); S.render(); }, 'chico peligro', { 'data-foco': foco });
+    const nivelSel = (max, v, fn, foco) => ui.select(Array.from({ length: max }, (_, i) => ({ v: String(i + 1), t: 'Nivel ' + (i + 1) })), String(v), x => fn(Number(x)), { 'data-foco': foco, 'aria-label': 'Nivel de especialización' });
+    const nuevo = (op, foco, agregar, et) => { let v = ''; return h('div', { class: 'fila-edit' }, ui.select(op, '', x => { v = x; }, { 'data-foco': foco, 'aria-label': et }), ui.boton('Agregar', () => { if (v) { agregar(v); S.render(); } }, 'chico', { 'data-foco': foco + '-add' })); };
+    const chips = (lista, nombre, foco) => h('div', { class: 'chips' }, lista.map((x, i) => h('span', { class: 'chip' }, nombre(x), ' ', h('button', { type: 'button', class: 'chip-x', 'aria-label': 'Quitar ' + nombre(x), 'data-foco': foco + '-q-' + i, onclick: () => { lista.splice(i, 1); S.render(); } }, '×'))));
+    const bonoTargets = [{ v: 'todas', t: 'Todas las armas' }, { v: 'cuerpo', t: 'Cuerpo a cuerpo' }, { v: 'distancia', t: 'A distancia' }, { v: 'grupo', t: 'Un grupo…' }, { v: 'arma', t: 'Un arma…' }];
+    const bonos = r.bonos.map((bo, i) => {
+      const [t0, id0] = /^(arma|grupo):/.test(bo.aplica) ? [bo.aplica.split(':')[0], bo.aplica.slice(bo.aplica.indexOf(':') + 1)] : [bo.aplica, ''];
+      const textoPrev = () => `Al nivel 1 / 5 / 9 / 13: ${[1, 5, 9, 13].map(n => A.reglas.kit.valorBono(bo, n)).join(' / ')} (positivo = mejora).`;
+      const prev = h('p', { class: 'meta', text: textoPrev() });
+      const num = (k, et, extra) => ui.campo(et, ui.numero(bo[k] === undefined ? '' : bo[k], v => { bo[k] = U.num(v); prev.textContent = textoPrev(); }, Object.assign({ step: 1, 'data-foco': `hb-kb-${i}-${k}` }, extra)), 'corto-c');
+      return h('div', { class: 'hb-bono' },
+        h('div', { class: 'rejilla g3' },
+          ui.campo('Aplica a', ui.select(bonoTargets, t0, v => { bo.aplica = v === 'arma' || v === 'grupo' ? v + ':' : v; S.render(); }, { 'data-foco': `hb-kb-${i}-t` })),
+          t0 === 'grupo' ? ui.campo('Grupo', ui.select(gruposOp, id0, v => { bo.aplica = 'grupo:' + v; S.render(); }, { 'data-foco': `hb-kb-${i}-g` })) : t0 === 'arma' ? ui.campo('Arma', ui.select(armasOp, id0, v => { bo.aplica = 'arma:' + v; S.render(); }, { 'data-foco': `hb-kb-${i}-a` })) : null,
+          ui.campo('Mejora', ui.select([{ v: 'gac0', t: 'GAC0 (golpe)' }, { v: 'dano', t: 'Daño' }, { v: 'rt', t: 'RT (pasos de ataque)' }], bo.stat, v => { bo.stat = v; }, { 'data-foco': `hb-kb-${i}-s` }))),
+        h('div', { class: 'rejilla g5' }, num('valor', 'Valor inicial'), num('desde', 'Desde el nivel', { min: 1 }), num('cada', 'Crece cada N niveles (0 = fijo)', { min: 0 }), num('paso', 'Cuánto crece', { step: 1 }), num('tope', 'Tope (0 = sin tope)', { min: 0 })),
+        prev, quitar(r.bonos, i, `hb-kb-${i}-q`));
+    });
+    return [h('h3', { text: 'Armas y pericias que da el kit (gratis)' }),
+      h('p', { class: 'ayuda', text: 'Nada de esto gasta PA ni PNA: aparece solo en las pestañas Armas y Pericias, marcado como "Del kit".' }),
+      h('h4', { text: 'Competencia con armas' }), chips(r.armas, nombreArma, 'hb-kr-a'), nuevo(armasOp, 'hb-kr-arma', v => { if (!r.armas.includes(v)) r.armas.push(v); }, 'Arma'),
+      h('h4', { text: 'Competencia con grupos enteros' }), chips(r.grupos, g => g, 'hb-kr-g'), nuevo(gruposOp, 'hb-kr-grupo', v => { if (!r.grupos.includes(v)) r.grupos.push(v); }, 'Grupo'),
+      h('h4', { text: 'Especialización' }),
+      r.esp.map((e, i) => h('div', { class: 'fila-edit' }, h('strong', { text: nombreArma(e.id) }), nivelSel(5, e.n, v => { e.n = v; }, `hb-kr-e-${i}`), quitar(r.esp, i, `hb-kr-eq-${i}`))), nuevo(armasOp, 'hb-kr-esp', v => { if (!r.esp.some(e => e.id === v)) r.esp.push({ id: v, n: 1 }); }, 'Arma a especializar'),
+      r.espGrupo.map((e, i) => h('div', { class: 'fila-edit' }, h('strong', { text: 'Grupo ' + e.grupo }), nivelSel(2, e.n, v => { e.n = v; }, `hb-kr-eg-${i}`), quitar(r.espGrupo, i, `hb-kr-egq-${i}`))), nuevo(gruposOp, 'hb-kr-espg', v => { if (!r.espGrupo.some(e => e.grupo === v)) r.espGrupo.push({ grupo: v, n: 1 }); }, 'Grupo a especializar'),
+      h('h4', { text: 'Pericias sin arma gratis' }),
+      r.noArmas.map((e, i) => h('div', { class: 'fila-edit' }, h('strong', { text: (S.reg.pericia(e.id) || { nombre: e.id + ' (ya no existe)' }).nombre }),
+        ui.campo('Mejoras gratis', ui.numero(e.mejoras, v => { e.mejoras = Math.max(0, U.num(v)); }, { min: 0, step: 1, class: 'corto', 'data-foco': `hb-kr-p-${i}` }), 'corto-c'), quitar(r.noArmas, i, `hb-kr-pq-${i}`))),
+      nuevo(pericOp, 'hb-kr-peri', v => { if (!r.noArmas.some(e => e.id === v)) r.noArmas.push({ id: v, mejoras: 0 }); }, 'Pericia'),
+      h('h4', { text: 'Bonos a armas (fijos o que crecen con el nivel)' }),
+      h('p', { class: 'ayuda', text: 'Ejemplo: espadas, GAC0, valor 1 desde el nivel 1, crece 1 cada 4 niveles, tope 4. Para un bono fijo deja "Crece cada" en 0.' }),
+      bonos.length ? bonos : h('p', { class: 'vacio', text: 'Sin bonos.' }),
+      ui.boton('Agregar bono', () => { r.bonos.push({ aplica: 'todas', stat: 'gac0', valor: 1, cada: 0, paso: 1, desde: 1, tope: 0 }); S.render(); }, 'chico', { 'data-foco': 'hb-kb-nuevo' })];
+  }
   function formKit(S, b) {
     b.sobreescribe = b.sobreescribe || {}; b.pericias = b.pericias || {};
     if (typeof b._habilidadesTexto !== 'string') b._habilidadesTexto = (b.habilidades || []).join('\n');
@@ -235,7 +305,8 @@
       h('p', { class: 'ayuda', text: 'Deja en blanco lo que el kit no cambie.' }),
       h('div', { class: 'rejilla g3' }, so('thaco', 'Tabla de THAC0', 'thaco'), so('salvaciones', 'Tabla de salvaciones', 'salvaciones'), so('xp', 'Tabla de experiencia', 'xp')),
       h('div', { class: 'rejilla g4' }, opcional(b.sobreescribe, 'dg', 'Dado de golpe', { min: 2 }), opcional(b.sobreescribe, 'dgNivelMax', 'Último nivel que tira dado', { min: 1 }), opcional(b.sobreescribe, 'pgDespues', 'PG fijos después', { min: 0 }), opcional(b.sobreescribe, 'topeBonoCon', 'Tope bono CON')),
-      h('div', { class: 'rejilla g4' }, pe('pa0', 'De arma al inicio', 0), pe('paCada', 'Una de arma cada N', 1), pe('pna0', 'Sin arma al inicio', 0), pe('pnaCada', 'Una sin arma cada N', 1))
+      h('div', { class: 'rejilla g4' }, pe('pa0', 'De arma al inicio', 0), pe('paCada', 'Una de arma cada N', 1), pe('pna0', 'Sin arma al inicio', 0), pe('pnaCada', 'Una sin arma cada N', 1)),
+      ...regalosKit(S, b)
     ];
   }
 
@@ -616,8 +687,8 @@
 
   function editor(S) {
     if (!sel) return h('div', { class: 'hb-vacio' }, h('h2', { text: 'Elige algo para editar' }),
-      h('p', { text: 'Crea una raza, clase, kit, deidad o tabla con el botón + de cada grupo, o abre una existente. Lo base se puede duplicar para modificarlo.' }),
-      h('p', { text: 'Los efectos que definas (bono al ataque, a salvaciones, a CA o a PG) se aplican solos en la pestaña Combate y se ven en "Todo lo que modifica tu ficha".' }));
+      h('p', { text: 'Crea algo con el botón + de la lista o abre uno existente. Lo base se duplica para modificarlo.' }),
+      h('p', { class: 'ayuda', text: 'Los efectos que definas se aplican solos y se ven en "Todo lo que modifica tu ficha".' }));
     const t = TIPOS.find(x => x.id === sel.tipo), b = sel.borrador;
     const cuerpo = h('fieldset', { class: 'hb-form', disabled: sel.lectura }, formularios[sel.tipo](S, b));
     const esNuevo = !sel.id;
@@ -677,11 +748,20 @@
     if (!buscar(S, tipo, id)) return false;
     S.pestana = 'homebrew'; A.almacen.fijarPref('pestana', 'homebrew'); abrir(S, tipo, id); window.scrollTo({ top: 0 }); return true;
   }
-  ui.hb = { copiarDesdeConsulta, abrirDesdeConsulta, TIPOS, formArma, formArmadura, plantillaArma: () => plantillas.arma(), plantillaArmadura: () => plantillas.armadura() };
+  ui.hb = { FAMILIAS, copiarDesdeConsulta, abrirDesdeConsulta, TIPOS, formArma, formArmadura, plantillaArma: () => plantillas.arma(), plantillaArmadura: () => plantillas.armadura() };
   ui.paneles.homebrew = S => {
     if (sel && !buscar(S, sel.tipo, sel.id || '') && sel.id) sel = null;   // el elemento ya no existe
-    return h('div', { class: 'hb' },
-      h('aside', { class: 'hb-lado' }, herramientas(S), TIPOS.map(t => lista(S, t))),
-      h('div', { class: 'hb-centro' }, editor(S)));
+    if (sel) familia = familiaDe(sel.tipo);
+    const fam = FAMILIAS.find(f => f.id === familia) || FAMILIAS[0];
+    const cuantos = f => f.tipos.reduce((n, id) => { const t = TIPOS.find(x => x.id === id); return n + (id === 'tabla' ? Object.values(S.hb.tablas).reduce((m, o) => m + Object.keys(o).length, 0) : S.hb[t.plural].length); }, 0);
+    const barra = h('nav', { class: 'hb-fam', 'aria-label': 'Categorías de homebrew' }, FAMILIAS.map(f => {
+      const n = cuantos(f);
+      return h('button', { type: 'button', class: 'hb-fam-b' + (f.id === fam.id ? ' activo' : ''), 'aria-pressed': f.id === fam.id ? 'true' : 'false', 'data-foco': 'hb-fam-' + f.id,
+        onclick: () => { familia = f.id; sel = null; error = ''; S.render(); } }, f.t, n ? h('small', { text: String(n) }) : null);
+    }), h('details', { class: 'hb-herr-d' }, h('summary', { text: 'Importar y exportar' }), herramientas(S)));
+    return h('div', { class: 'hb' }, barra,
+      h('div', { class: 'hb-cuerpo' },
+        h('aside', { class: 'hb-lado' }, fam.tipos.map(id => lista(S, TIPOS.find(t => t.id === id)))),
+        h('div', { class: 'hb-centro' }, editor(S))));
   };
 })(window.ADND);

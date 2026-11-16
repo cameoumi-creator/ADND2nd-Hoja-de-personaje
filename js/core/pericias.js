@@ -22,8 +22,8 @@
   const conocimiento = p => ['INT', 'SAB'].includes(p.car) && !(p.cats || []).includes('general');
   N.costoInicial = (p, cats) => (num(p.costo) || 1) + (acceso(p, cats) ? 0 : 1);
   const pagoInicial = (o, p, cats) => (o.concedida ? 0 : N.costoInicial(p, cats));
-  N.gasto = function (pj, reg, cats) {
-    return Object.entries(pj.pericias.noArmas).reduce((s, [id, o]) => { const p = reg.pericia(id); return s + (p ? pagoInicial(o, p, cats) + num(o.mejoras) : 0); }, 0);
+  N.gasto = function (pj, reg, cats, kit) {
+    return Object.entries(pj.pericias.noArmas).reduce((s, [id, o]) => { const p = reg.pericia(id); return s + (p ? (kit && kit.noArmas.has(id) ? 0 : pagoInicial(o, p, cats)) + num(o.mejoras) : 0); }, 0);
   };
   const opciones = p => (Array.isArray(p.opciones) ? p.opciones : []);
   const modDe = (p, o) => (opciones(p).length ? (opciones(p).includes(o.mod) ? o.mod : opciones(p)[0]) : (typeof p.mod === 'number' ? p.mod : null));
@@ -34,18 +34,22 @@
     return stat + m + num(o.mejoras);
   };
 
-  N.resumen = function (pj, reg, items, car, pnaLibres) {
-    const cats = N.categorias(items);
-    const lista = Object.entries(pj.pericias.noArmas).map(([id, o]) => {
-      const p = reg.pericia(id); if (!p) return { id, o, p: null };
+  N.resumen = function (pj, reg, items, car, pnaLibres, kit) {
+    const cats = N.categorias(items); kit = kit || { noArmas: new Map() };
+    const propias = Object.entries(pj.pericias.noArmas).map(([id, o]) => [id, o]);
+    /* Las que da el kit y no tienes anotadas aparecen solas (gratis, sin poder quitarlas). */
+    kit.noArmas.forEach((k, id) => { if (!pj.pericias.noArmas[id] && reg.pericia(id)) { const p = reg.pericia(id); propias.push([id, { mejoras: 0, concedida: true, fuente: 'Kit ' + k.f, car: 'FUE', mod: opciones(p)[0] === undefined ? null : opciones(p)[0], soloKit: true }]); } });
+    const lista = propias.map(([id, o0]) => {
+      const p = reg.pericia(id); if (!p) return { id, o: o0, p: null };
+      const k = kit.noArmas.get(id), o = k ? Object.assign({}, o0, { mejoras: num(o0.mejoras) + k.mejoras, concedida: true, fuente: o0.fuente || 'Kit ' + k.f }) : o0;
       const t = objetivo(p, o, car);
-      return { id, o, p, objetivo: t, sinEntrenar: t === null ? null : t - 4, costo: pagoInicial(o, p, cats) + num(o.mejoras), modificador: modDe(p, o), car: p.car === 'FUE/CAR' ? o.car : p.car };
+      return { id, o, p, objetivo: t, sinEntrenar: t === null ? null : t - 4, costo: (k ? 0 : pagoInicial(o0, p, cats)) + num(o0.mejoras), modificador: modDe(p, o), car: p.car === 'FUE/CAR' ? o.car : p.car, kit: k ? k.f : '', mejorasKit: k ? k.mejoras : 0, soloKit: !!o0.soloKit };
     });
     const consulta = p => {
       const t = objetivo(p, { mejoras: 0, car: 'FUE', mod: null }, car);
       return { objetivo: t, sinEntrenar: t === null ? null : t - 4, acceso: acceso(p, cats), conocimiento: conocimiento(p), costo: N.costoInicial(p, cats) };
     };
-    return { cats, lista, consulta, gastado: N.gasto(pj, reg, cats), libres: pnaLibres };
+    return { cats, lista, consulta, gastado: N.gasto(pj, reg, cats, kit), libres: pnaLibres };
   };
 
   /* Acciones: devuelven un texto con el motivo si no se puede. */

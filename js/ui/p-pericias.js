@@ -25,10 +25,11 @@
   }
 
   /* -------------------------------------------------------------- pericias del personaje */
+  const num0 = v => Number(v) || 0;
   function tarjetaPropia(S, x) {
     if (!x.p) return h('div', { class: 'tarjeta-arma' }, h('strong', { text: 'Pericia desconocida' }), h('p', { class: 'meta', text: 'Ya no existe en tu biblioteca.' }),
       ui.boton('Quitar', () => hacer(S, pj => N().acc.quitar(pj, x.id)), 'chico peligro'));
-    const p = x.p, o = x.o;
+    const p = x.p, o = x.o, propia = num0(o.mejoras) - (x.mejorasKit || 0);
     const objetivo = x.objetivo === null ? (p.car === 'NA' ? 'Sin prueba' : 'Especial') : `${x.objetivo} o menos`;
     const eleccion = [
       p.car === 'FUE/CAR' ? ui.select([{ v: 'FUE', t: 'FUE' }, { v: 'CAR', t: 'CAR' }], o.car, v => hacer(S, pj => N().acc.elegir(pj, x.id, 'car', v)), { 'data-foco': 'pn-car-' + x.id, 'aria-label': 'Característica de ' + p.nombre }) : null,
@@ -36,13 +37,15 @@
     ].filter(Boolean);
     return h('article', { class: 'tarjeta-arma' },
       h('div', { class: 'tarjeta-cab' },
-        h('div', {}, h('strong', { text: p.nombre }), o.concedida ? h('span', { class: 'etiqueta', text: 'Concedida' }) : null,
+        h('div', {}, h('strong', { text: p.nombre }), o.concedida ? h('span', { class: 'etiqueta', text: x.kit ? 'Gratis: ' + x.kit : 'Concedida' }) : null,
           h('div', { class: 'meta', text: `${p.car}${typeof p.mod === 'number' ? ' ' + sg(p.mod) : ''}${o.mejoras ? ' · mejoras +' + o.mejoras : ''} · ${x.costo} PNA gastadas${o.concedida && o.fuente ? ' · de ' + o.fuente : ''}` })),
         h('strong', { class: 'cifra', text: objetivo })),
       p.descripcion ? h('details', { class: 'desplegable' }, h('summary', { text: 'Descripción' }), h('p', { class: 'pericia-desc', text: p.descripcion }), p.fuente ? h('p', { class: 'meta', text: p.fuente }) : null) : null,
-      eleccion.length ? h('div', { class: 'fila-edit' }, ...eleccion) : null,
-      h('div', { class: 'fila-edit' },
-        ui.boton('− Quitar mejora', () => hacer(S, pj => N().acc.mejorar(pj, 0, x.id, -1)), 'chico', { disabled: o.mejoras ? null : true, 'data-foco': 'pn-dn-' + x.id }),
+      x.soloKit ? h('div', { class: 'fila-edit' }, h('span', { class: 'meta', text: `La da tu clase o kit${x.mejorasKit ? ' con +' + x.mejorasKit : ''}: no gasta PNA. Para mejorarla o cambiar su opción, anótala.` }),
+        ui.boton('Anotar para mejorarla', () => hacer(S, pj => N().acc.conceder(pj, S.reg, x.id, 'Gratis ' + x.kit)), 'chico', { 'data-foco': 'pn-anotar-' + x.id })) : null,
+      !x.soloKit && eleccion.length ? h('div', { class: 'fila-edit' }, ...eleccion) : null,
+      x.soloKit ? null : h('div', { class: 'fila-edit' },
+        ui.boton('− Quitar mejora', () => hacer(S, pj => N().acc.mejorar(pj, 0, x.id, -1)), 'chico', { disabled: propia > 0 ? null : true, 'data-foco': 'pn-dn-' + x.id }),
         ui.boton('+ Mejorar (1 PNA)', () => hacer(S, pj => N().acc.mejorar(pj, S.r.pericias.disponiblesPNA, x.id, 1)), 'chico', { 'data-foco': 'pn-up-' + x.id }),
         ui.boton(o.concedida ? 'Quitar' : 'Quitar y reembolsar', () => hacer(S, pj => N().acc.quitar(pj, x.id)), 'chico peligro', { 'data-foco': 'pn-q-' + x.id })));
   }

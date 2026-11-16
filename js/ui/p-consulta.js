@@ -60,6 +60,8 @@
     const p = c.pericias || {};
     return [lin('Tabla de THAC0', c.thaco), lin('Tabla de salvaciones', c.salvaciones), lin('Tabla de PX', c.xp), lin('Dado de golpe', 'd' + c.dg + (c.dgNivelMax ? ` hasta el nivel ${c.dgNivelMax}` : '')), lin('PG por nivel después', c.pgDespues),
       lin('Pericias con arma', p.pa0 !== undefined ? `${p.pa0} iniciales, +1 cada ${p.paCada}` : ''), lin('Pericias sin arma', p.pna0 !== undefined ? `${p.pna0} iniciales, +1 cada ${p.pnaCada}` : ''), lin('Ambidiestría gratis', c.ambidestriaGratis ? 'Sí' : ''),
+      (c.gratis || []).length ? lin('Pericias gratis', c.gratis.map(id => (reg.pericia(id) || { nombre: id }).nombre).join(', ')) : null,
+      (c.poderes || []).length ? [h('h3', { class: 'co-sub', text: 'Poderes de clase' }), (c.poderes).slice().sort((a, b) => a.nivel - b.nivel).map(q => h('p', {}, h('strong', { text: `Nivel ${q.nivel} · ${q.nombre}. ` }), q.texto))] : null,
       n ? tabla(['Nivel', 'THAC0'].concat(A.SAVES, ['PX']), filas) : null];
   };
   D.raza = (S, r) => {
@@ -68,7 +70,18 @@
       (r.variantes || []).length ? [subtitulo('Variantes'), h('ul', { class: 'cj-lista' }, r.variantes.map(v => h('li', {}, h('strong', { text: v.nombre }), v.origen === 'homebrew' ? h('span', { class: 'meta', text: ' · homebrew' }) : null, h('div', { class: 'meta', text: modsTxt(v.mods) }), parrafo(v.nota))))] : null,
       (r.elecciones || []).length ? [subtitulo('Elecciones'), h('ul', { class: 'cj-lista' }, r.elecciones.map(e => h('li', {}, h('strong', { text: e.etiqueta + ': ' }), e.opciones.map(o => o.etiqueta).join(', '))))] : null];
   };
-  D.kit = (S, k) => [lin('Clase', (S.reg.clase(k.clase) || {}).nombre || k.clase), lin('Ajustes a características', modsTxt(k.mods)), parrafo(k.nota),
+  const regalosTxt = (S, r) => {
+    if (!r) return [];
+    const K = A.reglas.kit, na = id => (S.reg.arma(id) || { nombre: id }).nombre, nombres = {}; S.reg.armas.forEach(a => { nombres[a.id] = a.nombre; });
+    const out = [];
+    if ((r.armas || []).length) out.push(lin('Competencia gratis con', r.armas.map(na).join(', ')));
+    if ((r.grupos || []).length) out.push(lin('Grupos gratis', r.grupos.join(', ')));
+    if ((r.esp || []).length || (r.espGrupo || []).length) out.push(lin('Especialización gratis', [...(r.esp || []).map(e => `${na(e.id)} (${e.n})`), ...(r.espGrupo || []).map(e => `grupo ${e.grupo} (${e.n})`)].join(', ')));
+    if ((r.noArmas || []).length) out.push(lin('Pericias sin arma gratis', r.noArmas.map(e => `${(S.reg.pericia(e.id) || { nombre: e.id }).nombre}${e.mejoras ? ' +' + e.mejoras : ''}`).join(', ')));
+    if ((r.bonos || []).length) out.push(lin('Bonos de arma', r.bonos.map(b => `${K.etiquetaAplica(b.aplica, nombres)}: ${{ gac0: 'GAC0', dano: 'daño', rt: 'RT' }[b.stat]} ${b.valor >= 0 ? '+' : ''}${b.valor}${b.cada ? `, ${b.paso >= 0 ? '+' : ''}${b.paso} cada ${b.cada} niveles` : ''}${b.desde > 1 ? ` desde el nivel ${b.desde}` : ''}${b.tope ? `, tope ${b.tope}` : ''}`).join(' · ')));
+    return out;
+  };
+  D.kit = (S, k) => [...regalosTxt(S, k.regalos), lin('Clase', (S.reg.clase(k.clase) || {}).nombre || k.clase), lin('Ajustes a características', modsTxt(k.mods)), parrafo(k.nota),
     (k.habilidades || []).length ? h('ul', { class: 'cj-lista' }, k.habilidades.map(x => h('li', {}, typeof x === 'string' ? x : [x.nombre ? h('strong', { text: x.nombre + ': ' }) : null, x.texto || x.nota || '']))) : null];
   D.linaje = (S, l) => [parrafo(l.desc), subtitulo('Habilidades'), h('ul', { class: 'cj-lista' }, (l.habilidades || []).map(x => h('li', {}, h('strong', { text: `Nivel ${x.nivel}: ${x.nombre}. ` }), x.texto))),
     (l.conjuros || []).some(a => a && a.length) ? [subtitulo('Conjuros del linaje'), h('ul', { class: 'cj-lista' }, l.conjuros.map((a, i) => (a && a.length ? h('li', {}, h('strong', { text: `Nivel ${i + 1}: ` }), a.map(x => nombreCj(S.reg, x.id)).join(', ')) : null)))] : null];
@@ -278,12 +291,16 @@
   ui.paneles.consulta = S => {
     if (!cat(est.cat)) est.cat = 'salvaje';
     const grupos = [...new Set(CATS.map(c => c.grupo))];
-    const nav = h('nav', { class: 'co-nav', 'aria-label': 'Categorías de consulta' }, grupos.map(g => h('div', { class: 'co-nav-grupo' }, h('h3', { class: 'co-nav-t', text: g }),
-      CATS.filter(c => c.grupo === g).map(c => h('button', { type: 'button', class: 'co-nav-b' + (c.id === est.cat && !est.gq.trim() ? ' activo' : ''), 'aria-current': c.id === est.cat ? 'page' : null, 'data-foco': 'co-cat-' + c.id, onclick: () => { est.cat = c.id; est.gq = ''; S.render(); } }, c.titulo)))));
+    const grupoAct = cat(est.cat).grupo;
+    const nav = h('nav', { class: 'co-nav', 'aria-label': 'Categorías de consulta' },
+      h('div', { class: 'co-fam' }, grupos.map(g => h('button', { type: 'button', class: 'hb-fam-b' + (g === grupoAct && !est.gq.trim() ? ' activo' : ''), 'aria-pressed': g === grupoAct ? 'true' : 'false', 'data-foco': 'co-fam-' + g,
+        onclick: () => { est.cat = (CATS.find(c => c.grupo === g) || {}).id; est.gq = ''; S.render(); } }, g))),
+      h('div', { class: 'co-subs' }, CATS.filter(c => c.grupo === grupoAct).map(c => h('button', { type: 'button', class: 'co-nav-b' + (c.id === est.cat && !est.gq.trim() ? ' activo' : ''), 'aria-current': c.id === est.cat ? 'page' : null, 'data-foco': 'co-cat-' + c.id, onclick: () => { est.cat = c.id; est.gq = ''; S.render(); } }, c.titulo))));
     const buscar = ui.campo('Buscar en toda la consulta', ui.texto(est.gq, v => { est.gq = v; S.render(); }, { type: 'search', placeholder: 'Conjuro, poder, clase, arma, pericia, tabla…', 'data-foco': 'co-global' }), 'co-global-c');
     const g = resultadosGlobales(S), c = cat(est.cat);
     return h('div', { class: 'co' },
-      h('div', { class: 'co-arriba' }, buscar, h('p', { class: 'meta', text: 'Consulta de reglas y datos. No usa tu personaje; lo que agregues en Homebrew aparece aquí marcado con ★.' })),
-      h('div', { class: 'co-cuerpo' }, nav, h('section', { class: 'bloque co-principal' }, g ? panelGlobal(S, g) : c.especial ? salvaje(S) : [h('h2', { text: c.titulo }), catalogo(S, c)])));
+      h('div', { class: 'co-arriba' }, buscar, h('p', { class: 'meta', text: 'No usa tu personaje. Lo de Homebrew aparece con ★.' })),
+      nav,
+      h('div', { class: 'co-cuerpo' }, h('section', { class: 'bloque co-principal' }, g ? panelGlobal(S, g) : c.especial ? salvaje(S) : [h('h2', { text: c.titulo }), catalogo(S, c)])));
   };
 })(window.ADND);

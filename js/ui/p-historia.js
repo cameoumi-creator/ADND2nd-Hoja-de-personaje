@@ -61,6 +61,7 @@
     const jugador = ui.bloque('Notas del jugador', ui.area(pj.notas.general, v => S.cambiar(p => { p.notas.general = v; }), { rows: 10, class: 'libreta', 'data-foco': 'nota-general', 'aria-label': 'Notas del jugador' }));
     const viejo = pj.notas.equipo.trim() ? ui.bloque('Notas de equipo (de la versión anterior)', h('p', { class: 'ayuda', text: 'Esta libreta ya no tiene pestaña propia: el equipo se lleva en Equipo. Aquí se conserva lo que escribiste.' }),
       ui.area(pj.notas.equipo, v => S.cambiar(p => { p.notas.equipo = v; }), { rows: 6, class: 'libreta', 'data-foco': 'nota-equipo', 'aria-label': 'Notas de equipo' })) : null;
-    return h('div', { class: 'historia' }, cuerpo, datos, hist, pers, objetivos, relaciones, hitos, cronica, reputacion, secretos, jugador, viejo);
+    [datos, objetivos, relaciones, hitos, cronica, reputacion, secretos, viejo].forEach(b => { if (b) b.classList.add('ancho-todo'); });
+    return h('div', { class: 'historia hi-rejilla' }, cuerpo, pers, hist, jugador, datos, objetivos, relaciones, hitos, cronica, reputacion, secretos, viejo);
   };
 })(window.ADND);

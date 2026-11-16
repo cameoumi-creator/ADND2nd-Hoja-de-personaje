@@ -184,14 +184,32 @@
     const artes = R.artes && reg ? R.artes.gasto(pj, reg) : { costo: 0, pa: 0, pna: 0 };
     const comprometidoPA = (comprada && reserva === 'PA' ? 1 : 0) + artes.pa, comprometidoPNA = (comprada && reserva === 'PNA' ? 1 : 0) + artes.pna;
     const gastoArmas = R.armas && reg ? R.armas.gasto(pj, reg, R.armas.contexto(pj, items, gob)) : 0;
-    const gastadoPA = pj.pericias.armas.length + gastoArmas, gastadoPNA = pj.pericias.otras.reduce((a, o) => a + o.costo, 0) + (R.noArmas && reg ? R.noArmas.gasto(pj, reg, R.noArmas.categorias(items)) : 0);
+    const gastadoPA = pj.pericias.armas.length + gastoArmas, gastadoPNA = pj.pericias.otras.reduce((a, o) => a + o.costo, 0) + (R.noArmas && reg ? R.noArmas.gasto(pj, reg, R.noArmas.categorias(items), R.kit.regalos(items, gob)) : 0);
     const totalPA = pa + fpa, totalPNA = pna + fpna;
     return {
-      pa, pna, fuentePA, fuentePNA, flex, flexPA: fpa, flexPNA: fpna, idiomasUsados, flexLibre: flex - fpa - fpna - idiomasUsados,
+      pa, pna, fuentePA, fuentePNA, flex, flexPA: fpa, flexPNA: fpna, idiomasUsados, flexLibre: flex - fpa - fpna, idiomasLibres: flex - idiomasUsados,
       totalPA, totalPNA, gastoArmas, gastadoPA, gastadoPNA, comprometidoPA, comprometidoPNA, gastoArtes: artes,
       disponiblesPA: Math.max(0, totalPA - comprometidoPA - gastadoPA), disponiblesPNA: Math.max(0, totalPNA - comprometidoPNA - gastadoPNA),
       ambidestria: gratis ? { activa: true, gratis: true, origen: gratis.clase.nombre } : { activa: comprada, gratis: false, reserva, origen: comprada ? `1 ${reserva}` : '—' }
     };
+  };
+
+  /* ---------------------------------------------------------------- movimiento */
+  const FACTOR_CARGA = { Normal: 1, Cargado: 1 / 2, Sobrecargado: 1 / 3 };
+  /* Base de la raza o (si es mayor) de la clase que gobierna, más bonos; la carga lo reduce. */
+  R.movimiento = function (pj, reg, gob, efectos, estadoCarga) {
+    const raza = reg.raza(pj.raza.id);
+    const baseRaza = raza ? (raza.mov !== undefined && raza.mov !== null ? num(raza.mov) : num((A.base.movRaza || {})[raza.id] === undefined ? 12 : A.base.movRaza[raza.id])) : 12;
+    const claseMov = (gob || []).filter(x => x.clase.mov !== undefined && x.clase.mov !== null).sort((a, b) => b.clase.mov - a.clase.mov)[0];
+    const partes = [];
+    let base = baseRaza; partes.push({ et: raza ? `Raza ${raza.nombre}` : 'Base', v: baseRaza });
+    if (claseMov && num(claseMov.clase.mov) > baseRaza) { partes.push({ et: `Clase ${claseMov.clase.nombre} (reemplaza la base)`, v: num(claseMov.clase.mov) - baseRaza }); base = num(claseMov.clase.mov); }
+    const bonos = efectos.filter(e => e.objetivo === 'mov');
+    bonos.forEach(e => partes.push({ et: e.etiqueta, v: e.valor }));
+    const sub = base + bonos.reduce((a, e) => a + e.valor, 0);
+    const factor = FACTOR_CARGA[estadoCarga] === undefined ? 1 : FACTOR_CARGA[estadoCarga];
+    const valor = Math.max(0, Math.floor(sub * factor));
+    return { valor, sinCarga: sub, base, partes, carga: estadoCarga || '', factor, reducido: factor !== 1 };
   };
 
   /* ---------------------------------------------------------------- resumen */
@@ -211,11 +229,13 @@
     const pg = { filas: pgFilas, clases: pgClases, extra: pgExtra, bonos: pgBonos, bono: pgBono, max: Math.max(0, pgClases + pgExtra + pgBono) };
     const defensa = car.DES.fila ? num(car.DES.fila['Defensa']) : 0;
     const ca = R.armadura(pj, reg, efectos, defensa);
+    const carga = R.equipo && reg ? R.equipo.carga(pj, reg, car.FUE.fila) : { estado: '' };
+    const mov = R.movimiento(pj, reg, gob, efectos, carga.estado);
     const tecnicas = R.tecnicas.resumen(pj, reg, items, car, ca.clase);
     const ego = round(num(car.CAR.total) + num(car.INT.total) + nivel);
     const belleza = round((num(car.CAR.total) + num(car.CON.total)) / 2);
     const pericias = R.pericias(pj, items, car.INT.total, efectos, gob, reg);
-    const noArmas = R.noArmas.resumen(pj, reg, items, car, pericias.disponiblesPNA);
+    const noArmas = R.noArmas.resumen(pj, reg, items, car, pericias.disponiblesPNA, R.kit.regalos(items, gob));
     const artes = R.artes.resumen(pj, reg, pericias);
     const techno = R.techno.resumen(pj, items);
     const conjuros = R.conjuros.resumen(pj, reg, items, car);
@@ -241,13 +261,13 @@
     const idiomas = {
       nativos: reg.nativosDe(razaObj),
       aprendidos: pj.idiomas.aprendidos.map(id => { const i = reg.idioma(id); return { id, nombre: i ? i.nombre : id, faltante: !i }; }),
-      total: pericias.flex, usados: pericias.idiomasUsados, enPericias: pericias.flexPA + pericias.flexPNA, libres: pericias.flexLibre
+      total: pericias.flex, usados: pericias.idiomasUsados, enPericias: pericias.flexPA + pericias.flexPNA, libres: pericias.idiomasLibres
     };
-    if (idiomas.libres < 0) avisos.push(`Idiomas y pericias flexibles gastan ${-idiomas.libres} hueco(s) de INT de más.`);
+    if (idiomas.libres < 0) avisos.push(`Idiomas aprendidos: gastas ${-idiomas.libres} hueco(s) de INT de más.`);
     if (artes.pa > pericias.totalPA || artes.pna > pericias.totalPNA) avisos.push(`Artes marciales: gastas ${artes.pa} PA y ${artes.pna} PNA; tienes ${pericias.totalPA} PA y ${pericias.totalPNA} PNA en total.`);
     const armas = R.armas ? R.armas.resumen(pj, reg, { items, gob, car, thaco, pericias }) : null;
     if (armas && armas.libres < 0) avisos.push(`Armas: gastas ${-armas.libres} PA más de los que tienes.`);
-    return { efectos, car, items, gob, nivel, thaco, salvaciones, pg, ca, ego, belleza, pericias, noArmas, tecnicas, artes, techno, conjuros, psionica, dotes, idiomas, armas, avisos: avisos.concat(conjuros.avisos, psionica.avisos, dotes && dotes.activo ? dotes.avisos : []) };
+    return { efectos, car, items, gob, nivel, thaco, salvaciones, pg, ca, mov, ego, belleza, pericias, noArmas, tecnicas, artes, techno, conjuros, psionica, dotes, idiomas, armas, avisos: avisos.concat(conjuros.avisos, psionica.avisos, dotes && dotes.activo ? dotes.avisos : []) };
   };
 
   /* Formato legible para tablas de características (0.85 → 85 %). */

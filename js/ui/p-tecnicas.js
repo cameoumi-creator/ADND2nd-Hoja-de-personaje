@@ -121,14 +121,14 @@
       ca.piel ? h('p', { class: 'meta' + (c.pielActiva ? '' : ' apagada'), text: `${ca.piel.nombre} ${sg(ca.piel.valor)} de CA (${ca.piel.arte}) · ${c.pielActiva ? 'activa' : 'inactiva, ' + c.motivoPiel}.` }) : null,
       m.artes.length < m.max ? h('div', { class: 'fila-edit' },
         ui.select([{ v: '', t: 'Elige un arte…' }].concat(m.disponibles.map(a => ({ v: a.id, t: `${a.nombre}${a.origen === 'homebrew' ? ' (propia)' : ''} · CA ${sg(a.ac)} · ${a.dano}` }))), arteElegida, v => { arteElegida = v; }, { 'data-foco': 'am-sel', 'aria-label': 'Arte marcial a aprender' }),
-        ui.boton('Aprender arte (1)', () => { const v = arteElegida; if (!v) return; arteElegida = ''; hacer(S, pj => AM().acc.anadir(pj, S.reg, S.r.artes.saldoPNA, v)); }, 'primario', { 'data-foco': 'am-add' })) : null);
+        ui.boton('Aprender arte (1)', () => { const v = arteElegida; if (!v) return; arteElegida = ''; hacer(S, pj => AM().acc.anadir(pj, S.reg, S.r.artes.saldoPNA, v, S.r.artes.saldoPA)); }, 'primario', { 'data-foco': 'am-add' })) : null);
 
     const tarjetaArte = a => {
       if (a.faltante) return h('article', { class: 'tarjeta-arma apagada' }, h('div', { class: 'tarjeta-cab' }, h('div', {}, h('strong', { text: a.nombre }), h('div', { class: 'meta', text: 'Este arte ya no existe en tu biblioteca.' })), ui.boton('Quitar', () => hacer(S, pj => AM().acc.quitar(pj, S.reg, a.id)), 'chico peligro', { 'data-foco': 'am-q-' + a.id })));
       const filas = a.movs.map(mv => h('tr', { class: mv.adquirido ? '' : 'mov-apagado' },
         h('th', { scope: 'row', text: mv.k }), h('td', { text: mv.nombre }), h('td', { text: mv.efecto || '—' }),
-        h('td', {}, mv.adquirido ? ui.boton('Quitar', () => hacer(S, pj => AM().acc.mov(pj, S.reg, S.r.artes.saldoPNA, a.id, mv.k)), 'chico peligro', { 'data-foco': `am-m-${a.id}-${mv.k}` })
-          : ui.boton('Aprender', () => hacer(S, pj => AM().acc.mov(pj, S.reg, S.r.artes.saldoPNA, a.id, mv.k)), 'chico', { disabled: mv.listo ? null : true, title: mv.listo ? null : 'Antes: ' + mv.previos.filter(p => !a.movs.find(q => q.k === p).adquirido).join(', '), 'data-foco': `am-m-${a.id}-${mv.k}` }))));
+        h('td', {}, mv.adquirido ? ui.boton('Quitar', () => hacer(S, pj => AM().acc.mov(pj, S.reg, S.r.artes.saldoPNA, a.id, mv.k, S.r.artes.saldoPA)), 'chico peligro', { 'data-foco': `am-m-${a.id}-${mv.k}` })
+          : ui.boton('Aprender', () => hacer(S, pj => AM().acc.mov(pj, S.reg, S.r.artes.saldoPNA, a.id, mv.k, S.r.artes.saldoPA)), 'chico', { disabled: mv.listo ? null : true, title: mv.listo ? null : 'Antes: ' + mv.previos.filter(p => !a.movs.find(q => q.k === p).adquirido).join(', '), 'data-foco': `am-m-${a.id}-${mv.k}` }))));
       return h('article', { class: 'tarjeta-arma grande' },
         h('div', { class: 'tarjeta-cab' }, h('div', {}, h('strong', { text: a.nombre }), h('div', { class: 'meta', text: `${a.comprados} de ${a.movs.length} movimientos · ${a.origen === 'homebrew' ? 'propia' : 'base'}` })),
           ui.boton('Quitar arte', () => hacer(S, pj => AM().acc.quitar(pj, S.reg, a.id)), 'chico peligro', { 'data-foco': 'am-q-' + a.id })),

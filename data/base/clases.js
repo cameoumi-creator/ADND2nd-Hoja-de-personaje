@@ -1,6 +1,8 @@
 /* Clases base. Campos: thaco/salvaciones/xp = nombre de tabla; dg = dado de golpe;
    dgNivelMax = último nivel que tira dg; pgDespues = PG fijos por nivel posterior;
    pericias = pericias de arma (pa) y no de arma (pna): iniciales y cada cuántos niveles ganas una.
+   mov: movimiento base de la clase (si es mayor que el de la raza, manda; ej. Bárbaro 18).
+   poderes: [{ nombre, nivel, texto }] (solo informativos); gratis: [ids de pericias sin arma gratis de la clase].
    Opcional: topeBonoCon (número; sin tope si es null). Por defecto: sin tope con la tabla thaco "Luchador", 2 con las demás. */
 ADND.base.clases = [
   {
@@ -12,7 +14,8 @@ ADND.base.clases = [
     dg: 10,
     dgNivelMax: 9,
     pgDespues: 3,
-    pericias: { pa0: 4, pna0: 3, paCada: 3, pnaCada: 3 }
+    pericias: { pa0: 4, pna0: 3, paCada: 3, pnaCada: 3 },
+    poderes: [{"nombre": "Especialización en armas", "nivel": 1, "texto": "Puede especializarse y llegar a la especialización más alta (ver pestaña Armas)."}, {"nombre": "Ataques extra", "nivel": 7, "texto": "3 ataques cada 2 rondas desde el nivel 7 y 2 por ronda desde el 13 (ya calculado en Armas)."}, {"nombre": "Seguidores", "nivel": 9, "texto": "Al llegar al nivel de nombre y levantar una fortaleza atrae soldados leales."}]
   },
   {
     id: "explorador",
@@ -24,6 +27,8 @@ ADND.base.clases = [
     dgNivelMax: 9,
     pgDespues: 3,
     pericias: { pa0: 4, pna0: 3, paCada: 3, pnaCada: 3 },
+    poderes: [{"nombre": "Enemigo predilecto", "nivel": 1, "texto": "Antes del nivel 2 elige una especie enemiga (gigantes, orcos, hombres lagarto, trolls, necrófagos…; el DM aprueba la elección). Contra ella tiene +4 a sus ataques. Esa enemistad es difícil de ocultar: −4 a las reacciones de las criaturas de ese tipo."}, {"nombre": "Empatía animal", "nivel": 1, "texto": "Con animales domésticos o no hostiles puede acercarse y hacerse amigo automáticamente, y reconoce sus cualidades (el mejor caballo del corral, la cría más prometedora). Con animales salvajes o entrenados para atacar, el animal tira salvación contra varas con −1 por cada tres niveles del explorador (−1 de nivel 1 a 3, −2 de 4 a 6, etc.); si falla, su reacción cambia una categoría a elección del explorador. Debe ir al frente y acercarse sin miedo."}, {"nombre": "Combate con dos armas", "nivel": 1, "texto": "Pelea con dos armas sin penalización extra de ambidestría (ver Armas)."}, {"nombre": "Rastreo y supervivencia", "nivel": 1, "texto": "Sabe rastrear y sobrevivir en la naturaleza: son pericias gratis de la clase."}, {"nombre": "Conjuros", "nivel": 8, "texto": "Lanza conjuros de explorador (druídicos y de sacerdote) desde el nivel 8."}, {"nombre": "Seguidores", "nivel": 10, "texto": "Atrae criaturas leales del bosque y compañeros al llegar al nivel de nombre."}],
+    gratis: ["nwp175", "nwp170"],
     ambidestriaGratis: true
   },
   {
@@ -35,7 +40,8 @@ ADND.base.clases = [
     dg: 10,
     dgNivelMax: 9,
     pgDespues: 3,
-    pericias: { pa0: 4, pna0: 3, paCada: 3, pnaCada: 3 }
+    pericias: { pa0: 4, pna0: 3, paCada: 3, pnaCada: 3 },
+    poderes: [{"nombre": "Detectar el mal", "nivel": 1, "texto": "Detecta intención malvada hasta a 60 pies concentrándose en una dirección; tarda una ronda y puede repetirlo cuantas veces quiera. Detecta monstruos y personajes malignos."}, {"nombre": "Salvaciones", "nivel": 1, "texto": "+2 a todas las tiradas de salvación."}, {"nombre": "Inmunidad a enfermedades", "nivel": 1, "texto": "Inmune a toda enfermedad (las aflicciones mágicas como la licantropía y la putrefacción de momia son maldiciones, no enfermedades)."}, {"nombre": "Imponer las manos", "nivel": 1, "texto": "Restaura 2 PG por nivel de experiencia, a sí mismo o a otro. Una vez por día. Alcance: toque."}, {"nombre": "Curar enfermedades", "nivel": 1, "texto": "Cura enfermedades de todo tipo (no maldiciones como la licantropía). Una vez por semana por cada cinco niveles (una vez a niveles 1–5, dos veces a 6–10, etc.)."}, {"nombre": "Protección contra el mal", "nivel": 1, "texto": "Aura de protección de 10 pies de radio: criaturas convocadas y específicamente malignas sufren −1 a sus ataques, sin importar a quién ataquen. Las criaturas afectadas ubican fácilmente su origen, aunque el paladín vaya disfrazado."}, {"nombre": "Armas sagradas", "nivel": 1, "texto": "Una espada sagrada desenvainada proyecta un círculo de poder de 10 pies de diámetro que disipa magia hostil de nivel hasta el nivel del paladín. (Es un arma especial: si consigue una, el DM explica sus otros poderes.)"}, {"nombre": "Expulsar muertos vivientes", "nivel": 3, "texto": "Expulsa muertos vivientes y demonios como un clérigo de dos niveles menos (a nivel 3, como clérigo de nivel 1)."}, {"nombre": "Montura fiel", "nivel": 4, "texto": "Puede llamar a su caballo de guerra a partir del nivel 4. No tiene por qué ser un caballo: es la criatura que el DM decida. No aparece de la nada: el paladín debe encontrarlo de forma memorable, normalmente en una búsqueda."}, {"nombre": "Conjuros", "nivel": 9, "texto": "Lanza conjuros de sacerdote desde el nivel 9."}]
   },
   {
     id: "espadachin",
@@ -46,7 +52,8 @@ ADND.base.clases = [
     dg: 10,
     dgNivelMax: 9,
     pgDespues: 3,
-    pericias: { pa0: 4, pna0: 3, paCada: 3, pnaCada: 3 }
+    pericias: { pa0: 4, pna0: 3, paCada: 3, pnaCada: 3 },
+    poderes: [{"nombre": "Técnicas de espadachín", "nivel": 1, "texto": "Sus técnicas se compran y se gestionan en la pestaña Técnicas."}]
   },
   {
     id: "barbaro",
@@ -57,7 +64,10 @@ ADND.base.clases = [
     dg: 12,
     dgNivelMax: 9,
     pgDespues: 3,
-    pericias: { pa0: 4, pna0: 3, paCada: 3, pnaCada: 3 }
+    pericias: { pa0: 4, pna0: 3, paCada: 3, pnaCada: 3 },
+    poderes: [{"nombre": "Supervivencia", "nivel": 1, "texto": "Sabe sobrevivir en la naturaleza: pericia gratis de la clase."}, {"nombre": "Movimiento 18", "nivel": 1, "texto": "Su movimiento base es 18."}],
+    gratis: ["nwp170"],
+    mov: 18
   },
   {
     id: "cambiaformas",
@@ -68,7 +78,8 @@ ADND.base.clases = [
     dg: 12,
     dgNivelMax: 9,
     pgDespues: 3,
-    pericias: { pa0: 2, pna0: 4, paCada: 3, pnaCada: 3 }
+    pericias: { pa0: 2, pna0: 4, paCada: 3, pnaCada: 3 },
+    poderes: [{"nombre": "Cambio de forma", "nivel": 1, "texto": "Puede adoptar otras formas según las reglas de tu campaña; anótalas en Historia o en las notas de la clase."}]
   },
   {
     id: "monje",
@@ -80,6 +91,7 @@ ADND.base.clases = [
     dgNivelMax: 9,
     pgDespues: 2,
     pericias: { pa0: 2, pna0: 4, paCada: 3, pnaCada: 3 },
+    poderes: [{"nombre": "Artes marciales", "nivel": 1, "texto": "Sus artes se compran y se gestionan en la pestaña Técnicas."}],
     ambidestriaGratis: true
   },
   {
@@ -91,7 +103,9 @@ ADND.base.clases = [
     dg: 8,
     dgNivelMax: 9,
     pgDespues: 2,
-    pericias: { pa0: 2, pna0: 4, paCada: 3, pnaCada: 3 }
+    pericias: { pa0: 2, pna0: 4, paCada: 3, pnaCada: 3 },
+    poderes: [{"nombre": "Conjuros divinos", "nivel": 1, "texto": "Lanza conjuros de las esferas que le da su deidad (pestaña Conjuros)."}, {"nombre": "Expulsar muertos vivientes", "nivel": 1, "texto": "Expulsa o controla muertos vivientes según su nivel."}],
+    gratis: ["nwp131", "nwp132"]
   },
   {
     id: "sacerdote_sp",
@@ -102,7 +116,9 @@ ADND.base.clases = [
     dg: 8,
     dgNivelMax: 9,
     pgDespues: 2,
-    pericias: { pa0: 2, pna0: 4, paCada: 3, pnaCada: 3 }
+    pericias: { pa0: 2, pna0: 4, paCada: 3, pnaCada: 3 },
+    poderes: [{"nombre": "Conjuros divinos", "nivel": 1, "texto": "Lanza conjuros de las esferas que le da su deidad (pestaña Conjuros)."}, {"nombre": "Poderes del especialista", "nivel": 1, "texto": "Tiene los poderes especiales de su deidad (ver pestaña Conjuros)."}, {"nombre": "Expulsar muertos vivientes", "nivel": 1, "texto": "Expulsa o controla muertos vivientes según su nivel."}],
+    gratis: ["nwp131", "nwp132"]
   },
   {
     id: "druida",
@@ -113,7 +129,8 @@ ADND.base.clases = [
     dg: 8,
     dgNivelMax: 9,
     pgDespues: 2,
-    pericias: { pa0: 2, pna0: 4, paCada: 3, pnaCada: 3 }
+    pericias: { pa0: 2, pna0: 4, paCada: 3, pnaCada: 3 },
+    poderes: [{"nombre": "Resistencia al fuego y a la electricidad", "nivel": 1, "texto": "+2 a todas las salvaciones contra ataques de fuego o electricidad."}, {"nombre": "Idioma secreto", "nivel": 1, "texto": "Habla un idioma secreto que solo conocen los druidas y que usan entre sí. No cuesta hueco de idioma ni de pericia sin arma."}, {"nombre": "Muérdago", "nivel": 1, "texto": "El muérdago es un símbolo sagrado importante y parte necesaria de ciertos conjuros (los que piden símbolo sagrado). Para ser plenamente eficaz debe recogerse a la luz de la luna llena con una hoz de oro o plata hecha para ello. Recogido de otro modo, el conjuro pierde la mitad de su efecto si causa daño o tiene área, y el objetivo gana +2 a su salvación si hay salvación."}, {"nombre": "Identificar", "nivel": 3, "texto": "Identifica con exactitud plantas, animales y agua limpia."}, {"nombre": "Libre movimiento en bosques / pasar sin rastro", "nivel": 3, "texto": "Atraviesa zonas cerradas (zarzas, enredaderas, matorrales) a su velocidad normal y sin dejar huella, como el conjuro Pasar sin rastro."}, {"nombre": "Comunicarse con criaturas", "nivel": 3, "texto": "Aprende los idiomas de las criaturas del bosque a razón de uno por nivel desde el 3 (centauros, dríadas, elfos, faunos, sátiros, gnomos, dragones, hombres lagarto, mantícoras, náyades, pixies, sprites, ents). Elige si gasta o no una pericia en esos idiomas."}, {"nombre": "Inmunidad al encantamiento", "nivel": 7, "texto": "Inmune a los hechizos de encantamiento lanzados por criaturas del bosque (dríadas, náyades, etc.)."}, {"nombre": "Cambio de forma", "nivel": 7, "texto": "Una vez al día cada una: ave, reptil y mamífero. El tamaño va desde un sapo o ave pequeña hasta un oso negro, solo criaturas normales. Al cambiar se cura 10–60 % del daño sufrido (redondeando hacia abajo). Adopta las características físicas de la criatura (CA, movimiento, etc.). La ropa y un objeto en cada mano pasan a formar parte de la nueva forma y reaparecen al volver; no se pueden usar en forma animal."}]
   },
   {
     id: "brujo",
@@ -124,7 +141,8 @@ ADND.base.clases = [
     dg: 8,
     dgNivelMax: 9,
     pgDespues: 2,
-    pericias: { pa0: 2, pna0: 4, paCada: 3, pnaCada: 3 }
+    pericias: { pa0: 2, pna0: 4, paCada: 3, pnaCada: 3 },
+    poderes: [{"nombre": "Pacto del brujo", "nivel": 1, "texto": "Sus técnicas y su pacto se gestionan en la pestaña Técnicas."}]
   },
   {
     id: "ladron",
@@ -136,6 +154,7 @@ ADND.base.clases = [
     dgNivelMax: 10,
     pgDespues: 2,
     pericias: { pa0: 3, pna0: 3, paCada: 4, pnaCada: 4 },
+    poderes: [{"nombre": "Habilidades de ladrón", "nivel": 1, "texto": "Sus porcentajes y técnicas se gestionan en la pestaña Técnicas."}, {"nombre": "Ataque por la espalda", "nivel": 1, "texto": "Contra un enemigo desprevenido: +4 al ataque y daño multiplicado ×2 (niveles 1–4), ×3 (5–8), ×4 (9–12), ×5 (13 o más)."}],
     ambidestriaGratis: true
   },
   {
@@ -147,7 +166,9 @@ ADND.base.clases = [
     dg: 6,
     dgNivelMax: 10,
     pgDespues: 2,
-    pericias: { pa0: 3, pna0: 3, paCada: 4, pnaCada: 4 }
+    pericias: { pa0: 3, pna0: 3, paCada: 4, pnaCada: 4 },
+    poderes: [{"nombre": "Habilidades de bardo", "nivel": 1, "texto": "Sus porcentajes y técnicas se gestionan en la pestaña Técnicas."}, {"nombre": "Música e influencia", "nivel": 1, "texto": "Su música y su palabra pueden influir en las reacciones y la moral de quienes lo escuchan."}, {"nombre": "Conocimiento de leyendas", "nivel": 1, "texto": "Puede reconocer objetos, lugares y personajes legendarios."}],
+    gratis: ["nwp131", "nwp116"]
   },
   {
     id: "psionico",
@@ -158,7 +179,8 @@ ADND.base.clases = [
     dg: 6,
     dgNivelMax: 10,
     pgDespues: 2,
-    pericias: { pa0: 2, pna0: 3, paCada: 5, pnaCada: 3 }
+    pericias: { pa0: 2, pna0: 3, paCada: 5, pnaCada: 3 },
+    poderes: [{"nombre": "Poderes psiónicos", "nivel": 1, "texto": "Sus disciplinas y poderes se gestionan en la pestaña Poderes."}]
   },
   {
     id: "hechicero",
@@ -169,7 +191,8 @@ ADND.base.clases = [
     dg: 6,
     dgNivelMax: 10,
     pgDespues: 2,
-    pericias: { pa0: 1, pna0: 4, paCada: 5, pnaCada: 3 }
+    pericias: { pa0: 1, pna0: 4, paCada: 5, pnaCada: 3 },
+    poderes: [{"nombre": "Linaje", "nivel": 1, "texto": "Su linaje y sus puntos de conjuro se gestionan en la pestaña Conjuros."}]
   },
   {
     id: "techno",
@@ -180,7 +203,8 @@ ADND.base.clases = [
     dg: 4,
     dgNivelMax: 10,
     pgDespues: 2,
-    pericias: { pa0: 3, pna0: 4, paCada: 3, pnaCada: 3 }
+    pericias: { pa0: 3, pna0: 4, paCada: 3, pnaCada: 3 },
+    poderes: [{"nombre": "Creaciones de Techno", "nivel": 1, "texto": "Sus dispositivos se gestionan en la pestaña Técnicas."}]
   },
   {
     id: "mago",
@@ -191,6 +215,8 @@ ADND.base.clases = [
     dg: 4,
     dgNivelMax: 10,
     pgDespues: 1,
-    pericias: { pa0: 1, pna0: 4, paCada: 6, pnaCada: 3 }
+    pericias: { pa0: 1, pna0: 4, paCada: 6, pnaCada: 3 },
+    poderes: [{"nombre": "Libro de conjuros", "nivel": 1, "texto": "Aprende conjuros arcanos y los guarda en su libro (pestaña Conjuros)."}],
+    gratis: ["nwp131"]
   }
 ];

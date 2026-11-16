@@ -16,7 +16,9 @@
     const thaco = h('strong', { class: 'cifra enorme' }), thacoL = h('ul', { class: 'desglose' });
     const ca = h('strong', { class: 'cifra enorme' }), caL = h('ul', { class: 'desglose' });
     const salv = h('tbody');
+    const mov = h('strong', { class: 'cifra enorme' }), movL = h('ul', { class: 'desglose' });
     S.enlaces.push(r => {
+      mov.textContent = r.mov.valor; movL.replaceChildren(...r.mov.partes.map(q => h('li', { text: `${q.et}: ${q.v > 0 && !/^(Raza|Base)/.test(q.et) ? U.signo(q.v) : q.v}` })), ...(r.mov.reducido ? [h('li', { text: `Carga ${r.mov.carga}: ×${r.mov.factor === 0.5 ? '1/2' : '1/3'} (de ${r.mov.sinCarga} a ${r.mov.valor})` })] : []));
       thaco.textContent = r.thaco.valor; thacoL.replaceChildren(...lineas(r.thaco.partes, r.thaco.bonos).map(t => h('li', { text: t })));
       ca.textContent = r.ca.valor;
       caL.replaceChildren(...['Base 10', `Destreza aplicada: ${U.signo(r.ca.defensa)}`].concat(r.ca.bonos.map(b => `${b.origen} ${b.etiqueta}: ${U.signo(b.valor)}`)).map(t => h('li', { text: t })));
@@ -28,6 +30,7 @@
     return h('div', { class: 'combate-cifras' },
       h('section', { class: 'bloque' }, h('h2', { text: 'THAC0' }), thaco, thacoL),
       h('section', { class: 'bloque' }, h('h2', { text: 'Clase de armadura' }), ca, caL, h('p', { class: 'ayuda', text: 'La armadura, el equipo y los estilos de pelea se configuran en la pestaña Armadura; aquí se ve el desglose.' })),
+      h('section', { class: 'bloque' }, h('h2', { text: 'Movimiento' }), mov, movL, h('p', { class: 'ayuda', text: 'Se reduce según la carga (pestaña Equipo): Cargado a la mitad, Sobrecargado a un tercio. Los bonos (botas, conjuros, dones) van en "Bonos manuales" con el objetivo Movimiento.' })),
       h('section', { class: 'bloque ancho', style: null }, h('h2', { text: 'Tiradas de salvación' }),
         h('div', { class: 'tabla-cont' }, h('table', { class: 'tabla salv' }, h('thead', {}, h('tr', {}, ['Salvación', 'Valor', 'Cómo sale'].map(t => h('th', { scope: 'col', text: t })))), salv))));
   }

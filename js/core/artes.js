@@ -66,16 +66,22 @@
 
   /* ---- Acciones: devuelven un texto con el motivo si no se pudo ---- */
   const acc = (AR.acc = {});
-  acc.anadir = (pj, reg, saldoPNA, id) => {
+  /* Si ya no hay PNA pero sí PA, el nuevo punto se paga solo con PA. */
+  const pagarNuevo = (pj, reg, saldoPNA, saldoPA) => {
+    if (saldoPNA >= 1) return null;
+    if (num(saldoPA) >= 1) { estado(pj).pa = AR.gasto(pj, reg).pa + 1; return null; }
+    return 'No te quedan PNA ni PA. Libera una pericia para comprar más.';
+  };
+  acc.anadir = (pj, reg, saldoPNA, id, saldoPA) => {
     const a = reg.arte(id), e = estado(pj);
     if (!a) return 'Ese arte no existe.';
     if (e.lista.some(x => x.id === id)) return 'Ya conoces ese arte.';
     if (e.lista.length >= MAX) return `Solo puedes conocer ${MAX} artes marciales.`;
-    if (saldoPNA < 1) return 'No te quedan PNA. Pasa un punto de PA a PNA con "Pagar con PA" o libera una pericia.';
+    const mal = pagarNuevo(pj, reg, saldoPNA, saldoPA); if (mal) return mal;
     e.lista.push({ id, movs: [] }); AR.sincronizar(pj, reg); return null;
   };
   acc.quitar = (pj, reg, id) => { estado(pj).lista = estado(pj).lista.filter(x => x.id !== id); AR.sincronizar(pj, reg); return null; };
-  acc.mov = (pj, reg, saldoPNA, id, k) => {
+  acc.mov = (pj, reg, saldoPNA, id, k, saldoPA) => {
     const x = estado(pj).lista.find(q => q.id === id), a = reg.arte(id); if (!x || !a) return 'Ese arte no existe.';
     const mov = movsDe(a).find(m => m.k === k); if (!mov) return 'Ese movimiento no existe.';
     if (x.movs.includes(k)) {
@@ -84,13 +90,13 @@
     }
     const falta = mov.previos.filter(p => !x.movs.includes(p));
     if (falta.length) return `Antes necesitas ${falta.join(', ')}.`;
-    if (saldoPNA < 1) return 'No te quedan PNA. Pasa un punto de PA a PNA con "Pagar con PA" o libera una pericia.';
+    const mal = pagarNuevo(pj, reg, saldoPNA, saldoPA); if (mal) return mal;
     x.movs.push(k); return null;
   };
   /* d > 0 paga un punto más con PA; d < 0, uno más con PNA. */
   acc.pago = (pj, reg, saldoPA, saldoPNA, d) => {
     const g = AR.gasto(pj, reg), e = estado(pj);
-    if (d > 0) { if (g.pa >= g.costo) return 'Ya pagas todo con PA.'; if (saldoPA < 1) return 'No te quedan PA.'; e.pa = g.pa + 1; return null; }
+    if (d > 0) { if (!g.costo) return 'Aún no tienes artes: al aprender una, se paga con PA si no te quedan PNA.'; if (g.pa >= g.costo) return 'Ya pagas todo con PA.'; if (saldoPA < 1) return 'No te quedan PA.'; e.pa = g.pa + 1; return null; }
     if (g.pa <= 0) return null;
     if (saldoPNA < 1) return 'No te quedan PNA para recibir ese punto.';
     e.pa = g.pa - 1; return null;

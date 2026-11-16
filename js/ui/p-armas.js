@@ -56,13 +56,13 @@
     const select = ui.select([{ v: '', t: 'Elige un arma…' }].concat(grupos), sel.dominio, v => { sel.dominio = v; }, { 'data-foco': 'dom-sel', 'aria-label': 'Arma a aprender' });
     const lista = a.dominio.length ? a.dominio.map(d => h('div', { class: 'tarjeta-arma' },
       h('div', { class: 'tarjeta-cab' },
-        h('div', {}, h('strong', { text: d.nombre }), h('span', { class: 'etiqueta', text: d.nombreEsp }),
-          h('div', { class: 'meta', text: `${d.grupo || 'Arma desconocida'} · especialización efectiva ${d.efectiva} · ${d.pagada} comprada(s) de ${a.ctx.oportunidades} posibles${d.regalada ? ' · ' + d.regalada + ' otorgada(s)' : ''}` })),
-        d.id.startsWith('am:') ? h('span', { class: 'etiqueta', text: 'Arte marcial' }) : ui.boton('Quitar', () => hacer(S, pj => R().acc.quitarArma(pj, d.id)), 'chico peligro', { 'data-foco': 'dom-q-' + d.id })),
+        h('div', {}, h('strong', { text: d.nombre }), h('span', { class: 'etiqueta', text: d.nombreEsp }), d.kit ? h('span', { class: 'etiqueta', text: 'Del kit: ' + d.kit }) : null,
+          h('div', { class: 'meta', text: `${d.grupo || 'Arma desconocida'} · especialización efectiva ${d.efectiva} · ${d.pagada} comprada(s) de ${a.ctx.oportunidades} posibles${d.regalada ? ' · ' + d.regalada + ' otorgada(s)' : ''}${d.kit ? ' · gratis (no gasta PA)' : ''}` })),
+        d.id.startsWith('am:') ? h('span', { class: 'etiqueta', text: 'Arte marcial' }) : d.soloKit ? h('span', { class: 'meta', text: 'No se puede quitar' }) : ui.boton('Quitar', () => hacer(S, pj => R().acc.quitarArma(pj, d.id)), 'chico peligro', { 'data-foco': 'dom-q-' + d.id })),
       h('div', { class: 'fila-pips' },
-        h('span', { text: 'Especialización' }), pips(5, d.efectiva, n => hacer(S, (pj, reg2, ctx, cap) => R().acc.especializar(pj, reg2, ctx, cap, d.id, n)), 'Especialización de ' + d.nombre, 'esp-' + d.id, n => n > a.ctx.mejor)),
+        h('span', { text: 'Especialización' }), pips(5, d.efectiva, n => hacer(S, (pj, reg2, ctx, cap) => R().acc.especializar(pj, reg2, ctx, cap, d.id, n)), 'Especialización de ' + d.nombre, 'esp-' + d.id, n => n > a.ctx.mejor || !!d.soloKit)),
       h('div', { class: 'fila-pips' },
-        h('span', { text: 'Otorgada' }), pips(5, d.regalada, n => hacer(S, (pj, reg2, ctx) => R().acc.regalarEsp(pj, ctx, d.id, n)), 'Especialización otorgada de ' + d.nombre, 'reg-' + d.id, n => n > a.ctx.mejor),
+        h('span', { text: 'Otorgada' }), pips(5, d.regalada, n => hacer(S, (pj, reg2, ctx) => R().acc.regalarEsp(pj, ctx, d.id, n)), 'Especialización otorgada de ' + d.nombre, 'reg-' + d.id, n => n > a.ctx.mejor || !!d.soloKit),
         d.regalada ? ui.texto(d.origen, v => S.cambiar(pj => R().acc.origenEsp(pj, d.id, v)), { placeholder: 'De dónde viene (kit, DJ…)', 'data-foco': 'org-' + d.id, 'aria-label': 'Origen de la especialización otorgada' }) : null)))
       : [h('p', { class: 'vacio', text: 'Todavía no sabes usar ningún arma por separado.' })];
     return h('div', {},
@@ -79,8 +79,8 @@
         h('thead', {}, h('tr', {}, ['Grupo', 'Competencia', 'Especialización'].map(t => h('th', { scope: 'col', text: t })))),
         h('tbody', {}, a.grupos.map(g => h('tr', {},
           h('th', { scope: 'row', text: g.grupo }),
-          h('td', {}, ui.boton(g.comp ? 'Quitar' : `Comprar (${g.deltaComp >= 0 ? '+' : ''}${g.deltaComp} PA)`, () => hacer(S, (pj, reg2, ctx, cap) => R().acc.grupoComp(pj, reg2, ctx, cap, g.grupo)), g.comp ? 'chico peligro' : 'chico', { 'data-foco': 'g-c-' + g.grupo })),
-          h('td', {}, g.comp ? pips(2, g.spec, n => hacer(S, (pj, reg2, ctx, cap) => R().acc.grupoEsp(pj, reg2, ctx, cap, g.grupo, n)), 'Especialización de grupo ' + g.grupo, 'g-e-' + g.grupo, n => n > g.tope) : h('span', { class: 'meta', text: g.conocidas ? `${g.conocidas} arma(s) sueltas` : '—' }))))))));
+          h('td', {}, g.kit && !(S.pj.armas.grupos[g.grupo] || {}).comp ? h('span', { class: 'etiqueta', text: 'Del kit: ' + g.kit }) : ui.boton(g.comp ? 'Quitar' : `Comprar (${g.deltaComp >= 0 ? '+' : ''}${g.deltaComp} PA)`, () => hacer(S, (pj, reg2, ctx, cap) => R().acc.grupoComp(pj, reg2, ctx, cap, g.grupo)), g.comp ? 'chico peligro' : 'chico', { 'data-foco': 'g-c-' + g.grupo })),
+          h('td', {}, g.comp ? pips(2, g.spec, n => hacer(S, (pj, reg2, ctx, cap) => R().acc.grupoEsp(pj, reg2, ctx, cap, g.grupo, n)), 'Especialización de grupo ' + g.grupo, 'g-e-' + g.grupo, n => (n > g.tope && n > g.kitEsp) || n <= g.kitEsp) : h('span', { class: 'meta', text: g.conocidas ? `${g.conocidas} arma(s) sueltas` : '—' }))))))));
   }
 
   /* -------------------------------------------------------------------- estilos */
@@ -89,12 +89,14 @@
     const est = a.estilos.map(e => h('div', { class: 'tarjeta-arma' },
       h('div', { class: 'tarjeta-cab' }, h('div', {}, h('strong', { text: e.nombre }), h('div', { class: 'meta', text: `${e.natural ? 'Acceso natural' : 'Fuera de tu categoría: +1 PA al aprender'} · tope actual ${e.tope}` })),
         pips(e.max, e.nivel, n => hacer(S, (pj, reg, ctx, cap) => R().acc.estilo(pj, reg, ctx, cap, e.id, n)), 'Nivel de ' + e.nombre, 'est-' + e.id, n => n > e.tope && n > e.nivel)),
-      e.nivel ? h('ul', { class: 'desglose' }, e.niveles.slice(0, e.nivel).map((t, i) => h('li', { text: `${i + 1}. ${t}` }))) : null));
+      h('div', { class: 'fila-edit' }, ui.campo('Niveles gratis (modificador externo)', ui.numero(e.extra, v => S.cambiar(pj => R().acc.estiloExtra(pj, e.id, v), { estructura: true }), { min: 0, max: e.max, step: 1, class: 'corto', 'data-foco': 'est-extra-' + e.id }), 'corto-c'),
+        e.extra ? h('span', { class: 'meta', text: `Total efectivo: nivel ${e.total} (${e.pagado} pagado + ${e.extra} gratis)` }) : null),
+      e.total ? h('ul', { class: 'desglose' }, e.niveles.slice(0, e.total).map((t, i) => h('li', { text: `${i + 1}. ${t}${i >= e.pagado ? ' (gratis)' : ''}` }))) : null));
     const cmb = a.combos.map(c => h('div', { class: 'tarjeta-arma' + (c.natural ? '' : ' apagada') },
       h('div', { class: 'tarjeta-cab' }, h('div', {}, h('strong', { text: c.nombre }), h('div', { class: 'meta', text: (c.natural ? 'Acceso natural a ambos' : 'No combinable: falta acceso natural') + ' · tope ' + c.tope })),
         pips(4, c.nivel, n => hacer(S, (pj, reg, ctx, cap) => R().acc.combo(pj, reg, ctx, cap, c.clave, n)), 'Nivel de combinación ' + c.nombre, 'cmb-' + c.clave, n => !c.natural || n > c.tope))));
     return h('div', {},
-      h('p', { class: 'ayuda', text: 'Cada nivel de estilo cuesta 1 PA por casilla (+1 PA en total si el estilo no es natural de tu clase) y se compra en orden; puedes subir un nivel cada 3 niveles de personaje.' }),
+      h('p', { class: 'ayuda', text: 'Los niveles gratis no cuestan PA (úsalos para bonos de un objeto, raza, deidad, etc.). Cada nivel de estilo pagado cuesta 1 PA por casilla (+1 PA en total si el estilo no es natural de tu clase) y se compra en orden; puedes subir un nivel cada 3 niveles de personaje.' }),
       h('div', { class: 'lista-armas' }, est), h('h3', { text: 'Combinar estilos' }), h('div', { class: 'lista-armas' }, cmb));
   }
 
@@ -175,7 +177,7 @@
         v => S.cambiar(pj => { pj.armas.pares.dos[clave] = v; }, { estructura: true }), { 'data-foco': 'par-' + clave }));
     const config = h('details', { class: 'desplegable' }, h('summary', { text: 'Configuración de dos armas' }),
       h('div', { class: 'cols2' }, par('Mano buena', 'buena'), par('Mano mala', 'mala')),
-      dos ? h('p', { class: 'meta', text: `Penalización base ${dos.baseA}/${dos.baseB}, reducida en ${dos.reduccion} (reacción ${dos.react}, ambidestría ${dos.amb}, estilo ${2 * (S.pj.armas.estilos.two || 0)}): mano buena ${dos.pa}, mano mala ${dos.pb}. Solo se aplica a las armas con el estilo "Dos armas".` })
+      dos ? h('p', { class: 'meta', text: `Penalización base ${dos.baseA}/${dos.baseB}, reducida en ${dos.reduccion} (reacción ${dos.react}, ambidestría ${dos.amb}, estilo ${2 * ((S.r.armas.estilos.find(x => x.id === 'two') || {}).total || 0)}): mano buena ${dos.pa}, mano mala ${dos.pb}. Solo se aplica a las armas con el estilo "Dos armas".` })
         : h('p', { class: 'ayuda', text: 'Elige dos armas ligeras o medianas (L o M) para calcular la penalización.' }));
     config.open = abiertos.has('cfg-dos'); config.addEventListener('toggle', () => { if (config.open) abiertos.add('cfg-dos'); else abiertos.delete('cfg-dos'); });
 

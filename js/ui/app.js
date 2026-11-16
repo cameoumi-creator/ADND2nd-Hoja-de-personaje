@@ -128,11 +128,11 @@
       h('div', { class: 'menu-cont' },
         h('div', { class: 'cab-pj' },
           h('label', { class: 'sr', for: 'lista-personajes', text: 'Personaje' }),
-          h('select', { id: 'lista-personajes', onchange: e => { guardarYa(); cargarPersonaje(A.almacen.cargar(e.target.value)); } })),
+          h('select', { id: 'lista-personajes', onchange: e => { const id = e.target.value; guardarYa(); const pj = A.almacen.cargar(id); if (pj) cargarPersonaje(pj); } })),
         h('div', { class: 'cab-acciones' },
           ui.boton('Nuevo', nuevo), ui.boton('Duplicar', duplicar), ui.boton('Eliminar', eliminar, 'peligro'),
           h('span', { class: 'sep' }),
-          ui.boton('Importar', importar), ui.boton('Exportar', exportar), ui.boton('Imprimir', () => { ui.hoja(S); window.print(); }, 'primario'))));
+          ui.boton('Importar', importar), ui.boton('Exportar', exportar), ui.boton('Imprimir', () => ui.dialogoImpresion(S), 'primario'))));
     cab.replaceChildren(
       h('div', { class: 'marca' }, h('span', { class: 'marca-t', text: 'Ficha de campaña' }), h('span', { class: 'marca-s', text: 'AD&D 2.5' })),
       h('label', { class: 'campo tema' }, h('span', { class: 'sr', text: 'Tema' }),

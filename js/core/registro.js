@@ -144,6 +144,7 @@
         nombre: String(r.nombre || '').trim(),
         mods: modsLimpios(r.mods), nota: String(r.nota || ''),
         efectos: efectosLimpios(r.efectos),
+        mov: r.mov === undefined || r.mov === null || r.mov === '' ? undefined : Math.min(60, Math.max(0, Math.round(U.num(r.mov)))),
         idiomas: Array.isArray(r.idiomas) ? [...new Set(r.idiomas.map(String).filter(Boolean))] : ['comun'],
         variantes: (Array.isArray(r.variantes) ? r.variantes : []).map(v => ({
           id: String(v.id || U.slug(v.nombre) || U.uid()), nombre: String(v.nombre || '').trim(),
@@ -165,6 +166,9 @@
         dg: Math.max(1, U.num(c.dg) || 8), dgNivelMax: Math.max(1, U.num(c.dgNivelMax) || 9), pgDespues: Math.max(0, U.num(c.pgDespues)),
         pericias: { pa0: Math.max(0, U.num(p.pa0)), pna0: Math.max(0, U.num(p.pna0)), paCada: Math.max(1, U.num(p.paCada) || 3), pnaCada: Math.max(1, U.num(p.pnaCada) || 3) }
       };
+      if (Array.isArray(c.poderes)) o.poderes = c.poderes.filter(x => x && String(x.nombre || '').trim()).slice(0, 60).map(x => ({ nombre: String(x.nombre).trim().slice(0, 80), nivel: Math.min(30, Math.max(1, Math.round(U.num(x.nivel)) || 1)), texto: String(x.texto || '').slice(0, 2000) }));
+      if (Array.isArray(c.gratis)) o.gratis = [...new Set(c.gratis.map(String).filter(Boolean))].slice(0, 40);
+      if (c.mov !== undefined && c.mov !== null && c.mov !== '') o.mov = Math.min(60, Math.max(0, Math.round(U.num(c.mov))));
       if (c.ambidestriaGratis) o.ambidestriaGratis = true;
       if (Array.isArray(c.catPericias)) o.catPericias = [...new Set(c.catPericias.map(String).filter(k => A.base.categoriasPericias[k] && k !== 'general'))];
       if (c.espArmas !== undefined && c.espArmas !== null && c.espArmas !== '') o.espArmas = Math.min(5, Math.max(0, Math.round(U.num(c.espArmas))));
@@ -182,7 +186,7 @@
       return {
         id: String(k.id || U.idNuevo('hb-kit', k.nombre)), nombre: String(k.nombre || '').trim(), clase: String(k.clase || ''),
         nota: String(k.nota || ''), habilidades: textos(k.habilidades), mods: modsLimpios(k.mods),
-        efectos: efectosLimpios(k.efectos), sobreescribe: sob, pericias: per
+        efectos: efectosLimpios(k.efectos), sobreescribe: sob, pericias: per, regalos: A.sanear.kitRegalos(k.regalos)
       };
     },
     idioma(i) {
@@ -218,6 +222,19 @@
       const peso = Number(String(o.peso === undefined || o.peso === null ? '' : o.peso).replace(',', '.'));
       return { id: String(o.id || U.idNuevo('hb-obj', o.nombre)), nombre: t(o.nombre).slice(0, 80), categoria: t(o.categoria) || 'Equipo misceláneo',
         coste: t(o.coste).slice(0, 40), peso: Number.isFinite(peso) && peso > 0 ? Math.round(peso * 1000) / 1000 : '', destino: dest.includes(o.destino) ? o.destino : 'Mochila', notas: t(o.notas).slice(0, 500) };
+    },
+    kitRegalos(r) {
+      r = r && typeof r === 'object' ? r : {}; const t = (v, n) => String(v === undefined || v === null ? '' : v).trim().slice(0, n || 80), lista = v => (Array.isArray(v) ? v : []).filter(x => x && typeof x === 'object');
+      const uniq = a => [...new Set(a.filter(Boolean))].slice(0, 100);
+      const lv = v => Math.min(5, Math.max(1, Math.round(U.num(v)) || 1));
+      const ap = v => { v = t(v, 100); return v === 'todas' || v === 'cuerpo' || v === 'distancia' || /^(arma|grupo):.+/.test(v) ? v : 'todas'; };
+      return {
+        armas: uniq((Array.isArray(r.armas) ? r.armas : []).map(x => t(x, 100))), grupos: uniq((Array.isArray(r.grupos) ? r.grupos : []).map(x => t(x, 60))),
+        esp: lista(r.esp).map(e => ({ id: t(e.id, 100), n: lv(e.n) })).filter(e => e.id).slice(0, 100), espGrupo: lista(r.espGrupo).map(e => ({ grupo: t(e.grupo, 60), n: Math.min(2, lv(e.n)) })).filter(e => e.grupo).slice(0, 30),
+        noArmas: lista(r.noArmas).map(e => ({ id: t(e.id, 100), mejoras: Math.min(20, Math.max(0, Math.round(U.num(e.mejoras)))) })).filter(e => e.id).slice(0, 100),
+        bonos: lista(r.bonos).map(b => ({ aplica: ap(b.aplica), stat: ['gac0', 'dano', 'rt'].includes(b.stat) ? b.stat : 'gac0', valor: Math.max(-10, Math.min(10, Math.round(U.num(b.valor)))),
+          cada: Math.min(30, Math.max(0, Math.round(U.num(b.cada)))), paso: Math.max(-5, Math.min(5, Math.round(U.num(b.paso)) || 1)), desde: Math.min(30, Math.max(1, Math.round(U.num(b.desde)) || 1)), tope: Math.min(20, Math.max(0, Math.round(Math.abs(U.num(b.tope))))) })).slice(0, 50)
+      };
     },
     variante(v) {
       return {

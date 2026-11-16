@@ -16,7 +16,7 @@
         t('nombre', 'Nombre', 'ancho2'), t('jugador', 'Jugador'),
         ui.campo('Alineamiento', ui.select(ALINEAMIENTOS.map(a => ({ v: a, t: a })), S.pj.identidad.alineamiento, v => S.cambiar(pj => { pj.identidad.alineamiento = v; }), { 'data-foco': 'id-ali' })),
         ui.campo('Deidad', ui.select(deidades, S.pj.identidad.deidad, v => S.cambiar(pj => { pj.identidad.deidad = v; }), { 'data-foco': 'id-deidad' })),
-        t('sexo', 'Sexo'), t('edad', 'Edad'), t('altura', 'Altura'), t('peso', 'Peso')),
+        t('sexo', 'Sexo'), t('edad', 'Edad'), t('altura', 'Altura'), t('peso', 'Peso'), t('ojos', 'Ojos'), t('cabello', 'Cabello'), t('piel', 'Piel')),
       ui.campo('Apariencia', ui.area(S.pj.identidad.apariencia, v => S.cambiar(pj => { pj.identidad.apariencia = v; }), { rows: 3, 'data-foco': 'id-apariencia' })));
   }
 
@@ -59,7 +59,7 @@
     S.enlaces.push(r => {
       const i = r.idiomas;
       nat.replaceChildren(...(i.nativos.length ? i.nativos.map(x => h('span', { class: 'chip' }, x.nombre)) : [h('span', { class: 'chip vacio', text: 'Esta raza no tiene idioma nativo definido' })]));
-      cont.textContent = `Huecos de INT: ${i.total} · idiomas aprendidos ${i.usados} · pericias flexibles ${i.enPericias} · libres ${i.libres}`;
+      cont.textContent = `Huecos de INT para idiomas: ${i.total} · aprendidos ${i.usados} · libres ${i.libres}`;
       cont.classList.toggle('mal', i.libres < 0);
     });
     const r0 = S.r.idiomas, tomados = new Set([...r0.aprendidos.map(x => x.id), ...r0.nativos.map(x => x.id)]);
@@ -68,7 +68,7 @@
       ui.boton('Quitar', () => S.cambiar(pj => { pj.idiomas.aprendidos.splice(n, 1); }, { estructura: true }), 'chico peligro', { 'data-foco': 'idi-q-' + n }))));
     const opciones = [{ v: '', t: 'Elige un idioma…' }].concat(S.reg.idiomas.filter(i => !tomados.has(i.id)).map(i => ({ v: i.id, t: i.nombre })));
     return ui.bloque('Idiomas',
-      h('p', { class: 'ayuda', text: 'El idioma nativo de la raza es gratis. Los demás salen de los huecos que da la Inteligencia (los mismos que usan las pericias flexibles).' }),
+      h('p', { class: 'ayuda', text: 'El idioma nativo de la raza es gratis. Los demás salen de los huecos que da la Inteligencia. Son independientes de las pericias flexibles: aunque la tabla es la misma, cada una tiene su propio cupo.' }),
       h('h3', { text: 'Nativos (gratis)' }), nat, h('h3', { text: 'Aprendidos' }),
       r0.aprendidos.length ? lista : h('p', { class: 'vacio', text: 'Todavía no aprendes ningún idioma.' }),
       h('div', { class: 'fila-edit' }, ui.select(opciones, idiomaSel, v => { idiomaSel = v; }, { 'data-foco': 'idi-sel', 'aria-label': 'Idioma a aprender' }),
@@ -115,5 +115,18 @@
     return ui.bloque('Retrato', ui.imagenCampo(S, { valor: S.pj.imagenes.retrato, alCambiar: v => S.cambiar(pj => { pj.imagenes.retrato = v; }, { estructura: true }), max: 500, titulo: 'Retrato', foco: 'img-retrato', forma: 'retrato' }),
       h('p', { class: 'ayuda', text: 'Busto del personaje. Aparece en el menú lateral y en la hoja impresa. El de cuerpo entero va en Historia.' }));
   }
-  ui.paneles.ficha = S => h('div', { class: 'cols' }, h('div', { class: 'col' }, retrato(S), identidad(S), raza(S), idiomas(S), opcionales(S)), h('div', { class: 'col ancha' }, caracteristicas(S)));
+  /* Poderes de clase (solo informativos): los que ya tienes y los que llegan con el nivel. */
+  function poderes(S) {
+    const caja = h('div');
+    S.enlaces.push((r) => {
+      const con = r.items.filter(x => (x.clase.poderes || []).length);
+      caja.replaceChildren(...(con.length ? con.map(x => {
+        const lista = x.clase.poderes.slice().sort((a, b) => a.nivel - b.nivel), activos = lista.filter(q => q.nivel <= x.nivel).length;
+        return h('details', { class: 'sub', open: x.i === 0 }, h('summary', { text: `${x.clase.nombre} · nivel ${x.nivel} (${activos} de ${lista.length} poderes)` }),
+          h('div', { class: 'poderes' }, lista.map(q => h('div', { class: 'poder' + (q.nivel <= x.nivel ? '' : ' apagada') }, h('strong', { text: q.nombre }), h('span', { class: 'meta', text: q.nivel <= x.nivel ? ` · nivel ${q.nivel}` : ` · llega al nivel ${q.nivel}` }), h('p', { class: 'p', text: q.texto })))));
+      }) : [h('p', { class: 'vacio', text: 'Tu clase no tiene poderes registrados. Puedes agregarlos en Homebrew.' })]));
+    });
+    return ui.bloque('Poderes de clase', caja);
+  }
+  ui.paneles.ficha = S => h('div', { class: 'cols' }, h('div', { class: 'col' }, retrato(S), identidad(S), raza(S), poderes(S)), h('div', { class: 'col ancha' }, caracteristicas(S), idiomas(S), opcionales(S)));
 })(window.ADND);

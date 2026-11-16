@@ -165,6 +165,33 @@ Todo informativo: no cambia ningún número de la hoja.
 - **Hoja impresa**: retrato en el encabezado; imagen de cuerpo entero junto al Equipo; secciones Historia y Compañeros. Los secretos solo se imprimen si los marcas como públicos; crónica y notas del jugador no se imprimen.
 - **Importar de la hoja vieja**: campos sueltos de Historia, séquito, mascotas y familiar (y el retrato si era una URL). Las listas con filas dinámicas (objetivos, relaciones, hitos, crónica, reputación, secretos y compañeros registrados) no se importan.
 
+### Kits: armas, pericias y bonos gratis
+
+En Homebrew → Personaje → Kits, un kit puede dar, sin gastar PA ni PNA: competencia con armas sueltas o grupos enteros, especialización (arma o grupo), pericias sin arma con mejoras gratis, y bonos a GAC0, daño o RT que son fijos o crecen (aplica a todas / cuerpo a cuerpo / distancia / un grupo / un arma; valor inicial, desde el nivel, +paso cada N niveles, tope opcional). Todo aparece marcado "Del kit" en Armas y Pericias, y los bonos se desglosan en cada arma. Solo cuentan los kits de la clase que gobierna (en doble clase, la congelada no aporta). Positivo = mejora.
+
+### Navegación de Homebrew y Consulta
+
+Ambas pestañas tienen una barra fija de familias (Personaje, Combate, Magia, Psiónica, Reglas opcionales, Equipo y otros; en Consulta, además, subcategorías). Solo se ve la lista de la familia elegida; el editor mantiene fijos Guardar / Cerrar y las listas "Base" van plegadas. Importar/exportar está en un desplegable.
+
+### Espacios reorganizados
+
+Ficha con columnas equilibradas, Equipo con el resumen de riqueza en una línea (desglose plegado) y Historia en dos columnas en pantallas anchas.
+
+### Poderes de clase, pericias gratis y estilos con niveles gratis
+
+- Cada clase puede tener **poderes** (solo texto, con el nivel en que llegan). Se ven en la pestaña Ficha (los que aún no llegan, atenuados), en Consulta y en la hoja impresa (solo los ya obtenidos). Las clases base traen los suyos (Druida, Paladín y Explorador con el texto completo; las demás con una descripción breve para revisar). En Homebrew, una clase puede tener poderes propios.
+- Cada clase puede dar **pericias sin arma gratis** (Explorador: rastreo y supervivencia; Bárbaro: supervivencia; Mago: leer y escribir; Sacerdote y Sacerdote especialista: leer y escribir y religión; Bardo: leer y escribir e historia local). Funcionan como las del kit y solo cuentan mientras la clase gobierne.
+- En Armas → Estilos cada estilo tiene **niveles gratis (modificador externo)**: suben el nivel efectivo sin gastar PA, hasta el máximo del estilo.
+- **Artes marciales**: si ya no te quedan PNA pero sí PA, el arte o movimiento nuevo se paga solo con PA (antes bloqueaba la compra y el botón "Pagar con PA" no hacía nada porque aún no había artes).
+- Los huecos de INT para **idiomas** y las **pericias flexibles** son cupos independientes: gastar uno no descuenta del otro.
+
+### Impresión: estilos, hoja de conjuros y movimiento
+
+- **Imprimir** abre un diálogo (se recuerda tu elección): qué imprimir (hoja de personaje, hoja de conjuros o las dos), el estilo (**Clásica**, **Azul ornamentada** con marcos y bandas azules sobre papel casi blanco, o **Compacta**, una sola página de combate) y **Ahorrar tinta** (sin bandas de color).
+- La hoja de personaje ahora trae Movimiento, GAC0 (natural, FUE, DES, ambidestría), la columna **Entrada** (daño plano del arma sin el dado) y ojos, cabello y piel. La Azul agrega la tabla de objetos equipados con las ranuras de la pestaña Armadura.
+- **Hoja de conjuros**: una página por clase lanzadora (Mago, Bardo, Hechicero, Brujo, Sacerdote, Druida…), con una tabla por nivel de conjuro: nombre, casilla **Mem.** (cuántas veces lo tienes memorizado) y casilla **Mat.** (componentes materiales), más renglones en blanco. Mago, Bardo, Hechicero y Brujo listan su libro o conocidos; Sacerdote y Druida listan todos los conjuros de sus esferas.
+- **Movimiento** (pestaña Combate y hojas): base de la raza (12 humano/elfo/semielfo…, 6 enano/gnomo/mediano; una raza homebrew puede fijar el suyo), o el de la clase si es mayor (Bárbaro 18), más bonos (objetivo "Movimiento" en Bonos manuales). La carga lo reduce: Cargado a la mitad, Sobrecargado a un tercio.
+
 ### Pericias: descripciones
 
 Las 226 pericias del catálogo traen su descripción (en el catálogo y en las aprendidas); las pericias propias de Homebrew tienen un campo de descripción que viaja en los paquetes. Las habilidades de Bribón parten de 40% en Escalar paredes y 15% en Escuchar ruidos para cualquier criatura; las bases de clase se respetan si son mayores.

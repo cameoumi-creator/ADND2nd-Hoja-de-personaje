@@ -41,27 +41,32 @@
     const lv = luchadores.length ? Math.max(1, luchadores[0].nivel) : 0;
     const rt = { der: lv >= 7 ? 2 : 1, izq: lv >= 13 ? 2 : 1, origen: luchadores.length ? luchadores[0].x.clase.nombre : 'Sin progresión Luchador' };
     rt.etiqueta = `${rt.der}/${rt.izq}`;
-    return { mejor, nivelEsp, oportunidades, natural, tope, rt };
+    return { mejor, nivelEsp, oportunidades, natural, tope, rt, kit: R.kit.regalos(items, gob) };
   };
   const maxEstilo = k => (B().estilos[k] && B().estilos[k].max) || 4;
+  /* Nivel efectivo de un estilo: lo pagado más los niveles gratis que da un modificador externo (nunca pasa del máximo). */
+  const lvE = (pj, k) => Math.min(maxEstilo(k), (pj.armas.estilos[k] || 0) + ((pj.armas.estiloExtra || {})[k] || 0));
 
   /* ---------------------------------------------------------------- dominio y costos */
   const esArte = id => String(id).startsWith('am:');   // el ataque desarmado de un arte marcial: la competencia ya la paga el arte
   const grupoDe = (pj, reg, id) => { const a = reg.arma(id); return a ? a.grupo : ''; };
   const specGrupo = (pj, g) => (pj.armas.grupos[g] && pj.armas.grupos[g].spec) || 0;
-  const efectivaDe = (pj, reg, id) => {
-    const d = pj.armas.dominio[id];
-    return d ? Math.min(5, Math.max(specGrupo(pj, grupoDe(pj, reg, id)), d.regalada + d.pagada)) : specGrupo(pj, grupoDe(pj, reg, id));
+  const specKit = (ctx, id, g) => { const k = ctx && ctx.kit; if (!k) return 0; return Math.max((k.spec.get(id) || { n: 0 }).n, (k.specGrupo.get(g) || { n: 0 }).n); };
+  const efectivaDe = (pj, reg, id, ctx) => {
+    const d = pj.armas.dominio[id], g = grupoDe(pj, reg, id), kit = specKit(ctx, id, g);
+    return Math.min(5, Math.max(kit, d ? Math.max(specGrupo(pj, g), d.regalada + d.pagada) : specGrupo(pj, g)));
   };
+  const kitDa = (ctx, id, g) => { const k = ctx && ctx.kit; return !!k && (k.armas.has(id) || k.grupos.has(g) || k.spec.has(id)); };
 
   A_.costos = function (pj, reg, ctx) {
     const grupos = new Set([...Object.keys(pj.armas.grupos), ...Object.keys(pj.armas.dominio).map(id => grupoDe(pj, reg, id))]);
     let dominio = 0;
     grupos.forEach(g => {
       const G = pj.armas.grupos[g] || {};
-      if (G.comp) dominio += 2;
-      if (G.spec) dominio += 2 * G.spec;
-      Object.entries(pj.armas.dominio).forEach(([id, d]) => { if (grupoDe(pj, reg, id) !== g) return; if (!G.comp && !esArte(id)) dominio += 1; dominio += d.pagada; });
+      const kg = ctx.kit && ctx.kit.grupos.has(g), ke = ctx.kit && ctx.kit.specGrupo.get(g) ? ctx.kit.specGrupo.get(g).n : 0;
+      if (G.comp && !kg) dominio += 2;
+      if (G.spec) dominio += 2 * Math.max(0, G.spec - ke);
+      Object.entries(pj.armas.dominio).forEach(([id, d]) => { if (grupoDe(pj, reg, id) !== g) return; if (!G.comp && !kg && !esArte(id) && !kitDa(ctx, id, g)) dominio += 1; dominio += d.pagada; });
     });
     let estilos = 0;
     Object.entries(pj.armas.estilos).forEach(([k, lv]) => { if (lv) estilos += lv + (ctx.natural(k) ? 0 : 1); });
@@ -82,7 +87,7 @@
     return e;
   };
   const efectoCombinado = (pj, k) => {
-    const e = efectoEstilo(k, pj.armas.estilos[k] || 0);
+    const e = efectoEstilo(k, lvE(pj, k));
     Object.entries(pj.armas.combos).forEach(([clave, lv]) => {
       const par = clave.split('|');
       if (!lv || !par.includes(k)) return;
@@ -159,30 +164,38 @@
     const estado = id => {
       const a = reg.arma(id), g = a ? a.grupo : '';
       if (esArte(id) && a) return 'Competente';
-      if ((pj.armas.grupos[g] && pj.armas.grupos[g].comp) || pj.armas.dominio[id]) return 'Competente';
+      if ((pj.armas.grupos[g] && pj.armas.grupos[g].comp) || pj.armas.dominio[id] || kitDa(ctx, id, g)) return 'Competente';
       return Object.keys(pj.armas.dominio).some(x => grupoDe(pj, reg, x) === g) ? 'Familiar' : 'No profesional';
     };
 
     const dominio = Object.entries(pj.armas.dominio).map(([id, d]) => {
-      const a = reg.arma(id), eff = efectivaDe(pj, reg, id);
-      return { id, arma: a, nombre: a ? a.nombre : id, grupo: a ? a.grupo : '', faltante: !a, regalada: d.regalada, pagada: d.pagada, origen: d.origen, efectiva: eff, nombreEsp: ESP[eff], tope: ctx.mejor };
+      const a = reg.arma(id), eff = efectivaDe(pj, reg, id, ctx), g = a ? a.grupo : '';
+      return { id, arma: a, nombre: a ? a.nombre : id, grupo: g, faltante: !a, regalada: d.regalada, pagada: d.pagada, origen: d.origen, efectiva: eff, nombreEsp: ESP[eff], tope: ctx.mejor, kit: kitDa(ctx, id, g) ? ((ctx.kit.armas.get(id) || (ctx.kit.spec.get(id) || {}).f || ctx.kit.grupos.get(g) || '')) : '' };
+    });
+    /* Lo que da el kit y no está en tu lista: aparece solo, no se puede quitar ni se paga. */
+    const kitIds = new Set([...ctx.kit.armas.keys(), ...ctx.kit.spec.keys()]);
+    kitIds.forEach(id => {
+      if (pj.armas.dominio[id]) return; const a = reg.arma(id); if (!a) return;
+      const eff = efectivaDe(pj, reg, id, ctx);
+      dominio.push({ id, arma: a, nombre: a.nombre, grupo: a.grupo, faltante: false, regalada: 0, pagada: 0, origen: '', efectiva: eff, nombreEsp: ESP[eff], tope: ctx.mejor, kit: ctx.kit.armas.get(id) || (ctx.kit.spec.get(id) || {}).f || '', soloKit: true });
     });
     const grupos = reg.gruposArmas().map(g => {
       const G = pj.armas.grupos[g] || { comp: false, spec: 0 };
       const conocidas = Object.keys(pj.armas.dominio).filter(id => grupoDe(pj, reg, id) === g).length;
       const copia = JSON.parse(JSON.stringify(pj.armas)); copia.grupos[g] = { comp: !G.comp, spec: G.comp ? 0 : G.spec };
       const delta = A_.costos({ armas: copia }, reg, ctx).dominio - costos.dominio;
-      return { grupo: g, comp: !!G.comp, spec: G.spec || 0, conocidas, deltaComp: delta, tope: Math.min(2, ctx.mejor, ctx.oportunidades) };
+      const kg = ctx.kit.grupos.get(g) || '', ke = ctx.kit.specGrupo.get(g);
+      return { grupo: g, comp: !!G.comp || !!kg, spec: Math.max(G.spec || 0, ke ? ke.n : 0), conocidas, deltaComp: delta, tope: Math.min(2, ctx.mejor, ctx.oportunidades), kit: kg || (ke ? ke.f : ''), kitEsp: ke ? ke.n : 0 };
     });
 
     const estilos = B().ordenEstilos.map(k => {
-      const def = B().estilos[k], lv = pj.armas.estilos[k] || 0;
-      return { id: k, nombre: def.nombre, nivel: lv, max: maxEstilo(k), tope: ctx.tope(k), natural: ctx.natural(k), niveles: def.niveles.map(n => n.desc), efecto: efectoEstilo(k, lv) };
+      const def = B().estilos[k], lvP = pj.armas.estilos[k] || 0, ext = (pj.armas.estiloExtra || {})[k] || 0, lv = lvE(pj, k);
+      return { id: k, nombre: def.nombre, nivel: lvP, extra: ext, total: lv, pagado: lvP, max: maxEstilo(k), tope: ctx.tope(k), natural: ctx.natural(k), niveles: def.niveles.map(n => n.desc), efecto: efectoEstilo(k, lv) };
     });
     const combos = [];
     B().ordenEstilos.forEach((a, i) => B().ordenEstilos.slice(i + 1).forEach(b => {
       const clave = claveCombo(a, b), nivel = pj.armas.combos[clave] || 0, nat = ctx.natural(a) && ctx.natural(b);
-      combos.push({ clave, a, b, nombre: `${B().estilos[a].nombre} ↔ ${B().estilos[b].nombre}`, nivel, natural: nat, tope: Math.min(pj.armas.estilos[a] || 0, pj.armas.estilos[b] || 0) });
+      combos.push({ clave, a, b, nombre: `${B().estilos[a].nombre} ↔ ${B().estilos[b].nombre}`, nivel, natural: nat, tope: Math.min(lvE(pj, a), lvE(pj, b)) });
     }));
 
     /* instancias */
@@ -192,12 +205,12 @@
     let dos = null;
     if (buena && mala && buena !== mala) {
       const base = penalizacionBase(datosDe(buena), datosDe(mala));
-      if (base) { const r = reducirDual(base[0], base[1], pj.armas.estilos.two || 0, reaccion, pericias.ambidestria.activa); dos = Object.assign({ buena, mala, baseA: base[0], baseB: base[1] }, r); }
+      if (base) { const r = reducirDual(base[0], base[1], lvE(pj, 'two'), reaccion, pericias.ambidestria.activa); dos = Object.assign({ buena, mala, baseA: base[0], baseB: base[1] }, r); }
     }
     const penal = i => (dos && i.estilo === 'two' ? (dos.buena === i ? dos.pa : dos.mala === i ? dos.pb : 0) : 0);
 
     const instancias = pj.armas.instancias.map(i => {
-      const a = datosDe(i), sp = a ? efectivaDe(pj, reg, a.id) : 0, est = a ? estado(a.id) : 'No profesional';
+      const a = datosDe(i), sp = a ? efectivaDe(pj, reg, a.id, ctx) : 0, est = a ? estado(a.id) : 'No profesional';
       const modos = !a ? ['Cuerpo'] : a.tipo === 'distancia' ? (/arroj/i.test(a.esp) ? ['Distancia', 'Cuerpo'] : ['Distancia']) : (/arroj/i.test(a.esp) ? ['Cuerpo', 'Arrojada'] : ['Cuerpo']);
       const modo = modos.includes(i.modo) ? i.modo : modos[0];
       const opciones = [['none', 'Ninguno']];
@@ -207,16 +220,16 @@
       const sutilPermitida = !!a && /sutil/i.test(a.esp);
       const conDes = sutilPermitida && i.sutileza === 'DES' && modo === 'Cuerpo';
       const baseGac0 = modo === 'Cuerpo' && !conDes ? gac0Fue : gac0Des;
-      const lvUna = pj.armas.estilos.one || 0;
+      const lvUna = lvE(pj, 'one');
       const tacticos = estilo === 'one' ? Math.min(4, (lvUna >= 1 ? 2 : 0) + (lvUna >= 3 ? 2 : 0)) : 0;
       const tacGac0 = estilo === 'one' ? clamp(i.puntosTacticos, 0, tacticos) : 0;
       const profGac0 = est === 'Competente' ? 0 : est === 'Familiar' ? 2 : 4;
       const espGac0 = sp >= 2 ? -3 : sp >= 1 ? -1 : 0;
-      const pen = penal(i);
+      const pen = penal(i), bk = a ? R.kit.bonosDe(ctx.kit, a) : { gac0: 0, dano: 0, rt: 0, partes: [] };
       const partesGac0 = [
         { et: modo === 'Cuerpo' && !conDes ? 'GAC0 con FUE' : 'GAC0 con DES', v: baseGac0, base: true },
         { et: `Competencia (${est})`, v: profGac0 }, { et: `Especialización ${sp}`, v: espGac0 }, { et: 'Mágico', v: -i.magico },
-        { et: 'Estilo', v: eff.gac0 }, { et: 'Puntos tácticos', v: -tacGac0 }, { et: 'Dos armas', v: pen }, { et: 'Ajuste manual', v: i.ajusteGac0 }
+        { et: 'Estilo', v: eff.gac0 }, ...bk.partes.filter(q => q.stat === 'gac0').map(q => ({ et: q.et, v: -q.v })), { et: 'Puntos tácticos', v: -tacGac0 }, { et: 'Dos armas', v: pen }, { et: 'Ajuste manual', v: i.ajusteGac0 }
       ].filter(p => p.base || p.v);
       const gac0 = Math.max(1, partesGac0.reduce((s, p) => s + p.v, 0));
 
@@ -226,7 +239,7 @@
       }
       const espDano = modo === 'Cuerpo' ? (sp >= 2 ? 3 : sp >= 1 ? 2 : 0) : 0;
       const pasosDado = (sp >= 4 ? 1 : 0) + i.dadoMagico;
-      const partesDano = [{ et: etAtrib, v: atrib }, { et: `Especialización ${sp}`, v: espDano }, { et: 'Mágico', v: i.magico }, { et: 'Estilo', v: eff.dano }, { et: 'Ajuste manual', v: i.ajusteDano }].filter(p => p.v);
+      const partesDano = [{ et: etAtrib, v: atrib }, { et: `Especialización ${sp}`, v: espDano }, { et: 'Mágico', v: i.magico }, { et: 'Estilo', v: eff.dano }, ...bk.partes.filter(q => q.stat === 'dano').map(q => ({ et: q.et, v: q.v })), { et: 'Ajuste manual', v: i.ajusteDano }].filter(p => p.v);
       const plano = partesDano.reduce((s, p) => s + p.v, 0);
       const extraTec = a && a.techDado ? ` + ${a.techDado}` : '';   // dado extra de un arma fabricada por un Techno
       const dano = a ? { p: formatoDano(a.dm, plano, pasosDado) + extraTec, g: formatoDano(a.dg, plano, pasosDado) + extraTec } : { p: '—', g: '—' };
@@ -235,8 +248,8 @@
       const pasosClase = aPasos(ctx.rt.etiqueta), pasosArma = a ? num(a.rt) : 0, pasosBase = Math.max(pasosClase, pasosArma);
       const origenRt = pasosArma >= pasosClase ? `Arma ${a ? a.nombre : ''}`.trim() : `Clase ${ctx.rt.origen}`;
       const rtArte = a ? num(a.extraRt) : 0, rtTech = a ? num(a.techRt) : 0;
-      const rtDelta = (sp >= 1 ? 1 : 0) + (sp >= 4 ? 1 : 0) + i.rtMagico + eff.rt + rtArte + rtTech;
-      const partesRt = [{ et: `Base (${origenRt})`, v: aEtiqueta(pasosBase), base: true }, { et: 'Ataques extra del arte', v: rtArte }, { et: 'Bono RT del Techno', v: rtTech }, { et: 'Especialización', v: (sp >= 1 ? 1 : 0) + (sp >= 4 ? 1 : 0) }, { et: 'Mágico', v: i.rtMagico }, { et: 'Estilo', v: eff.rt }].filter(p => p.base || p.v);
+      const rtDelta = (sp >= 1 ? 1 : 0) + (sp >= 4 ? 1 : 0) + i.rtMagico + eff.rt + rtArte + rtTech + bk.rt;
+      const partesRt = [{ et: `Base (${origenRt})`, v: aEtiqueta(pasosBase), base: true }, { et: 'Ataques extra del arte', v: rtArte }, { et: 'Bono RT del Techno', v: rtTech }, { et: 'Especialización', v: (sp >= 1 ? 1 : 0) + (sp >= 4 ? 1 : 0) }, { et: 'Mágico', v: i.rtMagico }, { et: 'Estilo', v: eff.rt }, ...bk.partes.filter(q => q.stat === 'rt').map(q => ({ et: q.et, v: q.v }))].filter(p => p.base || p.v);
       const critico = !a ? '—' : sp >= 3 ? (a.adv || a.crit || '—') : (a.crit || '—');
 
       const escudo = null;
@@ -250,7 +263,7 @@
     const par = pj.armas.pares.escudo, instEsc = porId(par.escudo), datosEsc = instEsc ? datosDe(instEsc) : null;
     let escudo = null;
     if (instEsc && datosEsc && datosEsc.escudo) {
-      const nivel = pj.armas.estilos.shield || 0, eff = efectoCombinado(pj, 'shield'), otra = porId(par.arma);
+      const nivel = lvE(pj, 'shield'), eff = efectoCombinado(pj, 'shield'), otra = porId(par.arma);
       const ap = aporteEscudo(eff, datosEsc);
       escudo = { inst: instEsc, arma: otra && otra !== instEsc ? otra : null, nivel, eff, ca: ap.ca, bloqueos: ap.bloq, salv: eff.salv, man: eff.man, notas: eff.notas, primerGolpe: nivel === 0, aplicada: A_.estiloCA(pj, reg).escudoAplicado, calculo: instancias.find(x => x.inst === instEsc) };
     }
@@ -298,18 +311,19 @@
     if (nv > G.spec + 1 || nv > Math.min(ctx.mejor, ctx.oportunidades)) return 'Aún no puedes especializarte en el grupo a ese nivel.';
     G.spec = nv; return null;
   });
+  acc.estiloExtra = (pj, k, n) => { pj.armas.estiloExtra = pj.armas.estiloExtra || {}; const v = Math.max(0, Math.min(maxEstilo(k), Math.round(Number(n) || 0))); if (v) pj.armas.estiloExtra[k] = v; else delete pj.armas.estiloExtra[k]; };
   acc.estilo = (pj, reg, ctx, cap, k, n) => probar(pj, reg, ctx, cap, () => {
     const cur = pj.armas.estilos[k] || 0, nv = cur === n ? n - 1 : n;
     if (nv > cur + 1) return 'Los niveles se compran en orden.';
     if (nv > ctx.tope(k)) return 'Tu nivel aún no permite ese nivel de estilo (uno cada 3 niveles).';
     if (nv <= 0) delete pj.armas.estilos[k]; else pj.armas.estilos[k] = nv;
     // un combo no puede superar el nivel de sus estilos
-    Object.keys(pj.armas.combos).forEach(c => { const [x, y] = c.split('|'); const tope = Math.min(pj.armas.estilos[x] || 0, pj.armas.estilos[y] || 0); if (pj.armas.combos[c] > tope) { if (tope) pj.armas.combos[c] = tope; else delete pj.armas.combos[c]; } });
+    Object.keys(pj.armas.combos).forEach(c => { const [x, y] = c.split('|'); const tope = Math.min(lvE(pj, x), lvE(pj, y)); if (pj.armas.combos[c] > tope) { if (tope) pj.armas.combos[c] = tope; else delete pj.armas.combos[c]; } });
     return null;
   });
   acc.combo = (pj, reg, ctx, cap, clave, n) => probar(pj, reg, ctx, cap, () => {
     const [a, b] = clave.split('|'), cur = pj.armas.combos[clave] || 0, nv = cur === n ? n - 1 : n;
-    const tope = Math.min(pj.armas.estilos[a] || 0, pj.armas.estilos[b] || 0);
+    const tope = Math.min(lvE(pj, a), lvE(pj, b));
     if (!ctx.natural(a) || !ctx.natural(b)) return 'Solo se combinan estilos a los que tu clase accede de forma natural.';
     if (nv > cur + 1 || nv > tope) return 'Primero sube los dos estilos.';
     if (nv <= 0) delete pj.armas.combos[clave]; else pj.armas.combos[clave] = nv;
@@ -334,7 +348,7 @@
     const vacio = { mejor: null, escudo: 0, hayEscudo: false, escudoAplicado: false };
     if (!pj.armas) return vacio;
     const candidatos = [];
-    const lvUna = pj.armas.estilos.one || 0, tacticos = Math.min(4, (lvUna >= 1 ? 2 : 0) + (lvUna >= 3 ? 2 : 0));
+    const lvUna = lvE(pj, 'one'), tacticos = Math.min(4, (lvUna >= 1 ? 2 : 0) + (lvUna >= 3 ? 2 : 0));
     pj.armas.instancias.forEach(i => {
       if (i.estilo !== 'one') return;
       const resto = Math.max(0, tacticos - clamp(i.puntosTacticos, 0, tacticos));
@@ -345,7 +359,7 @@
     let escudo = 0, hayEscudo = false;
     if (a && a.escudo) {
       hayEscudo = true;
-      const nivel = pj.armas.estilos.shield || 0, ap = aporteEscudo(efectoCombinado(pj, 'shield'), a);
+      const nivel = lvE(pj, 'shield'), ap = aporteEscudo(efectoCombinado(pj, 'shield'), a);
       escudo = ap.ca;
       if (ap.ca) candidatos.push({ etiqueta: `Arma-escudo (${a.nombre}), nivel ${nivel}`, valor: ap.ca, escudo: true });
     }

@@ -19,6 +19,7 @@
   ui.equipoDestino = v => { const [tipo, id] = String(v || 'mochila:').split(':'); return { tipo: tipo || 'mochila', id: id || '' }; };
 
   /* ---------------------------------------------------------------- resumen de riqueza */
+  let riqAbierta = false;
   function resumen(S) {
     const cuerpo = h('div', { class: 'eq-riq' }), tot = h('p', { class: 'eq-tot' });
     S.enlaces.push((r, reg, pj) => {
@@ -28,8 +29,11 @@
       cuerpo.replaceChildren(h('table', { class: 'tabla eq-tabla-riq' }, h('thead', {}, h('tr', {}, ['Lugar', 'Objetos', 'Monedas', 'Tesoros', 'Inmueble', 'Total'].map(t => h('th', { text: t })))),
         h('tbody', {}, q.filas.map(f => h('tr', {}, h('th', { scope: 'row', text: (f.tipo === 'mochila' ? '' : TITULOS[f.tipo] + ': ') + f.nombre }), ...[f.objetos, f.monedas, f.tesoros, f.propiedad, f.total].map(v => h('td', { text: fmt(v) })))))));
     });
-    return ui.bloque('Resumen de riqueza', h('p', { class: 'ayuda', text: 'Valores en monedas de oro (mo). Lo que no tiene valor escrito se cuenta aparte y no suma. Es solo informativo.' }), tot, cuerpo,
+    const det = h('details', { class: 'eq-riq-d' }, h('summary', { text: 'Desglose por lugar y venta' }),
+      h('p', { class: 'ayuda', text: 'Valores en monedas de oro (mo). Lo que no tiene valor escrito se cuenta aparte y no suma. Es solo informativo.' }), cuerpo,
       h('div', { class: 'fila-edit' }, ui.campo('Venta: % del valor', ui.numero(S.pj.equipo.pctVenta, v => S.cambiar(pj => { const n = num(v); pj.equipo.pctVenta = n === '' ? 50 : Math.min(1000, n); }), { min: 0, max: 1000, step: 5, class: 'corto', 'data-foco': 'eq-pct' }), 'corto-c')));
+    det.open = riqAbierta; det.addEventListener('toggle', () => { riqAbierta = det.open; });
+    return h('section', { class: 'bloque eq-riq-b' }, tot, det);
   }
 
   /* ---------------------------------------------------------------- piezas reutilizables */

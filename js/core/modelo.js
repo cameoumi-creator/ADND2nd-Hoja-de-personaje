@@ -13,7 +13,7 @@
     return {
       formato: A.FORMATO, version: A.VERSION, id: 'pj-' + U.uid() + U.uid(),
       creado: U.ahora(), modificado: U.ahora(),
-      identidad: { nombre: '', jugador: '', alineamiento: 'Neutral', sexo: '', edad: '', altura: '', peso: '', deidad: '', apariencia: '' },
+      identidad: { nombre: '', jugador: '', alineamiento: 'Neutral', sexo: '', edad: '', altura: '', peso: '', ojos: '', cabello: '', piel: '', deidad: '', apariencia: '' },
       caracteristicas: car,
       raza: { id: 'humano', variante: '', elecciones: {} },
       trayectoria: 'unica',
@@ -32,7 +32,7 @@
       historia: normalizarHistoria({}),
       companeros: normalizarCompaneros({}),
       imagenes: normalizarImagenes({}),
-      armas: { dominio: {}, grupos: {}, estilos: {}, combos: {}, instancias: [], pares: { dos: { buena: '', mala: '' }, escudo: { arma: '', escudo: '' } } },
+      armas: { dominio: {}, grupos: {}, estilos: {}, estiloExtra: {}, combos: {}, instancias: [], pares: { dos: { buena: '', mala: '' }, escudo: { arma: '', escudo: '' } } },
       notas: { general: '', historia: '', equipo: '' }
     };
   };
@@ -40,10 +40,11 @@
   const entero = (v, min, max) => U.clamp(Math.round(U.num(v)), min, max);
   function normalizarArmas(a, base) {
     a = a && typeof a === 'object' ? a : {};
-    const o = { dominio: {}, grupos: {}, estilos: {}, combos: {}, instancias: [], pares: JSON.parse(JSON.stringify(base.pares)) };
+    const o = { dominio: {}, grupos: {}, estilos: {}, estiloExtra: {}, combos: {}, instancias: [], pares: JSON.parse(JSON.stringify(base.pares)) };
     Object.entries(a.dominio || {}).forEach(([id, d]) => { if (id) o.dominio[id] = { pagada: entero(d && d.pagada, 0, 5), regalada: entero(d && d.regalada, 0, 5), origen: String((d && d.origen) || '') }; });
     Object.entries(a.grupos || {}).forEach(([g, d]) => { if (g) o.grupos[g] = { comp: !!(d && d.comp), spec: entero(d && d.spec, 0, 2) }; });
     Object.entries(a.estilos || {}).forEach(([k, v]) => { const n = entero(v, 0, 5); if (n) o.estilos[k] = n; });
+    Object.entries(a.estiloExtra || {}).forEach(([k, v]) => { const n = entero(v, 0, 5); if (n) o.estiloExtra[k] = n; });
     Object.entries(a.combos || {}).forEach(([k, v]) => { const n = entero(v, 0, 4); if (n) o.combos[k] = n; });
     o.instancias = (Array.isArray(a.instancias) ? a.instancias : []).filter(i => i && i.base).map(i => ({
       id: String(i.id || U.idNuevo('inst', i.base)), base: String(i.base), nombre: String(i.nombre || ''), modo: i.modo === 'Distancia' || i.modo === 'Arrojada' ? i.modo : 'Cuerpo',
