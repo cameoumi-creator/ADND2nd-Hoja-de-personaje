@@ -4,7 +4,10 @@
   'use strict';
   const U = A.util;
 
-  A.hbVacio = () => ({ razas: [], clases: [], kits: [], deidades: [], armas: [], armaduras: [], pericias: [], escuelas: [], artes: [], creaciones: [], conjuros: [], escuelasMagia: [], linajes: [], pactos: [], poderesPsi: [], disciplinasPsi: [], defensasPsi: [], magiaSalvaje: [], dotes: [], dotesNacimiento: [], objetosTienda: [], variantes: [], idiomas: [], tablas: { thaco: {}, salvaciones: {}, xp: {} } });
+  /* Esferas vigentes (base + homebrew); se actualizan cada vez que se arma el registro. */
+  A.listaEsferas = () => A.esferasActuales || A.base.esferas || [];
+  A.esferaValida = id => A.listaEsferas().some(e => e.id === id) || /^hb-esfera/.test(String(id));
+  A.hbVacio = () => ({ razas: [], clases: [], kits: [], deidades: [], armas: [], armaduras: [], pericias: [], escuelas: [], artes: [], creaciones: [], conjuros: [], escuelasMagia: [], esferas: [], linajes: [], pactos: [], poderesPsi: [], disciplinasPsi: [], defensasPsi: [], magiaSalvaje: [], dotes: [], dotesNacimiento: [], objetosTienda: [], variantes: [], idiomas: [], tablas: { thaco: {}, salvaciones: {}, xp: {} } });
 
   /* El ataque desarmado de un arte: RT 1/1 (2 pasos) y cada ataque extra del arte suma 2 pasos (1/1 + 2 ataques = 3/3). */
   /* Imágenes permitidas: una URL http(s) o una imagen chica embebida (la que sube el jugador ya viene reducida). */
@@ -45,6 +48,7 @@
       creaciones: unir([], hb.creaciones, 'Creación'),
       conjuros: unir(A.base.conjuros || [], hb.conjuros, 'Conjuro'),
       escuelasMagia: unir(A.base.escuelasMagia || [], hb.escuelasMagia, 'Escuela de magia'),
+      esferas: unir(A.base.esferas || [], hb.esferas, 'Esfera'),
       linajes: unir(A.base.linajes || [], hb.linajes, 'Linaje'),
       pactos: unir(A.base.pactos || [], hb.pactos, 'Pacto'),
       poderesPsi: unir((A.base.psionica || {}).poderes || [], hb.poderesPsi, 'Poder psiónico'),
@@ -79,6 +83,7 @@
     reg.kit = id => mk.get(id) || null;
     reg.deidad = id => md.get(id) || null;
     reg.arte = id => mam.get(id) || null;
+    A.esferasActuales = reg.esferas;
     const mcj = porId(reg.conjuros), mem = porId(reg.escuelasMagia), mli = porId(reg.linajes), mpa = porId(reg.pactos), mpp = porId(reg.poderesPsi);
     reg.conjuro = id => mcj.get(id) || null;
     reg.escuelaMagia = id => mem.get(id) || null;
@@ -298,7 +303,11 @@
         efecto: String(c.efecto || '').slice(0, 8000), material: t(c.material, 300)
       };
       if (c.reverso) o.reverso = String(c.reverso).slice(0, 4000);
-      if (tipo === 'divino') o.esfera = t(c.esfera, 120);
+      if (tipo === 'divino') {
+        const ids = [...new Set((Array.isArray(c.esferas) ? c.esferas : []).map(String).filter(x => A.esferaValida(x)))].slice(0, 12);
+        if (ids.length) { o.esferas = ids; o.esfera = ids.map(i => (A.listaEsferas().find(e => e.id === i) || {}).nombre).filter(Boolean).join(', ').slice(0, 120); }
+        else o.esfera = t(c.esfera, 120);
+      }
       return o;
     },
     linaje(l) {
@@ -349,6 +358,10 @@
       while (o.tecnicas.length && !o.tecnicas[o.tecnicas.length - 1].nombre && !o.tecnicas[o.tecnicas.length - 1].efecto) o.tecnicas.pop();   // solo se recortan las vacías del final: el lugar de cada técnica es su rango
       return o;
     },
+    esfera(e) {
+      e = e && typeof e === 'object' ? e : {};
+      return { id: String(e.id || U.idNuevo('hb-esfera', e.nombre)), nombre: String(e.nombre || '').trim().slice(0, 80), desc: String(e.desc || '').slice(0, 2000) };
+    },
     escuelaMagia(e) {
       e = e && typeof e === 'object' ? e : {};
       const o = { id: String(e.id || U.idNuevo('hb-escuelamagia', e.nombre)), nombre: String(e.nombre || '').trim().slice(0, 80), desc: String(e.desc || '').slice(0, 2000) };
@@ -375,7 +388,7 @@
     },
     deidad(d) {
       if (typeof d === 'string') d = { nombre: d };
-      const validas = new Set((A.base.esferas || []).map(e => e.id)), lista = l => [...new Set((Array.isArray(l) ? l : []).map(String).filter(x => validas.has(x)))];
+      const lista = l => [...new Set((Array.isArray(l) ? l : []).map(String).filter(x => A.esferaValida(x)))];
       const e = d.esferas && typeof d.esferas === 'object' ? d.esferas : null, may = e ? lista(e.mayores) : [], men = e ? lista(e.menores).filter(x => !may.includes(x)) : [];
       const o = { id: String(d.id || U.idNuevo('hb-deidad', d.nombre)), nombre: String(d.nombre || '').trim(), nota: String(d.nota || '') };
       if (may.length || men.length) o.esferas = { mayores: may, menores: men };
@@ -398,6 +411,7 @@
       hb.idiomas = (Array.isArray(p.idiomas) ? p.idiomas : []).map(A.sanear.idioma).filter(x => x.nombre);
       hb.creaciones = (Array.isArray(p.creaciones) ? p.creaciones : []).map(A.sanear.creacion).filter(x => x.nombre);
       hb.conjuros = (Array.isArray(p.conjuros) ? p.conjuros : []).map(A.sanear.conjuro).filter(x => x.nombre);
+      hb.esferas = (Array.isArray(p.esferas) ? p.esferas : []).map(A.sanear.esfera).filter(x => x.nombre);
       hb.escuelasMagia = (Array.isArray(p.escuelasMagia) ? p.escuelasMagia : []).map(A.sanear.escuelaMagia).filter(x => x.nombre);
       hb.linajes = (Array.isArray(p.linajes) ? p.linajes : []).map(A.sanear.linaje).filter(x => x.nombre);
       hb.poderesPsi = (Array.isArray(p.poderesPsi) ? p.poderesPsi : []).map(A.sanear.poderPsi).filter(x => x.nombre);
@@ -424,7 +438,7 @@
   A.fusionarHb = function (hb, paquete) {
     const nuevo = A.sanear.paquete(paquete);
     const res = { agregados: 0, repetidos: 0 };
-    ['razas', 'clases', 'kits', 'deidades', 'armas', 'armaduras', 'pericias', 'escuelas', 'artes', 'creaciones', 'conjuros', 'escuelasMagia', 'linajes', 'pactos', 'poderesPsi', 'disciplinasPsi', 'defensasPsi', 'magiaSalvaje', 'dotes', 'dotesNacimiento', 'objetosTienda', 'variantes', 'idiomas'].forEach(t => {
+    ['razas', 'clases', 'kits', 'deidades', 'armas', 'armaduras', 'pericias', 'escuelas', 'artes', 'creaciones', 'conjuros', 'escuelasMagia', 'esferas', 'linajes', 'pactos', 'poderesPsi', 'disciplinasPsi', 'defensasPsi', 'magiaSalvaje', 'dotes', 'dotesNacimiento', 'objetosTienda', 'variantes', 'idiomas'].forEach(t => {
       hb[t] = hb[t] || [];
       const ids = new Set(hb[t].map(x => x.id));
       nuevo[t].forEach(x => { if (ids.has(x.id)) res.repetidos++; else { hb[t].push(x); ids.add(x.id); res.agregados++; } });
@@ -468,6 +482,12 @@
     const escUsadas = new Set(cj.mago && cj.mago.escuela ? [cj.mago.escuela] : []);
     (hb.conjuros || []).forEach(x => { if (usadosCj.has(x.id)) { out.conjuros.push(x); (x.escuelas || []).forEach(e => escUsadas.add(e)); } });
     (hb.escuelasMagia || []).forEach(x => { if (escUsadas.has(x.id)) out.escuelasMagia.push(x); });
+    const espUsadas = new Set();
+    const addEsf = e => { if (e) [...(e.mayores || []), ...(e.menores || [])].forEach(i => espUsadas.add(i)); };
+    out.deidades.forEach(d => addEsf(d.esferas)); Object.values(cj.clases || {}).forEach(c => addEsf(c.esferas));
+    out.conjuros.forEach(x => (x.esferas || []).forEach(i => espUsadas.add(i)));
+    (hb.pactos || []).forEach(x => { if (cj.brujo && x.id === cj.brujo.pacto) (x.esferas || []).forEach(i => espUsadas.add(i)); });
+    (hb.esferas || []).forEach(x => { if (espUsadas.has(x.id)) out.esferas.push(x); });
     const linUsado = (hb.linajes || []).find(l => cj.hechicero && l.id === cj.hechicero.linaje); if (linUsado) out.linajes.push(linUsado);
     const pactoUsado = (hb.pactos || []).find(x => cj.brujo && x.id === cj.brujo.pacto); if (pactoUsado) out.pactos.push(pactoUsado);
     const ps = (pj && pj.psionica) || {}, poderesUsados = new Set([...(ps.ciencias || []), ...(ps.devociones || []), ...((ps.talento && ps.talento.poderes) || []).map(x => x.id), ...(ps.activos || []).map(a => a.id)]);

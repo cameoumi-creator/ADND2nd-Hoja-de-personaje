@@ -7,9 +7,15 @@
   const abiertos = new Set();
   let conjunto = '';
 
+  /* La cifra sigue al personaje en cada cambio (valor puede ser un número o una función que lo lee). */
+  const salida = (valor, etiqueta) => {
+    const o = h('output', { text: sg(typeof valor === 'function' ? valor() : valor), 'aria-label': etiqueta });
+    if (typeof valor === 'function') ui.S.enlaces.push(() => { o.textContent = sg(valor()); });
+    return o;
+  };
   const stepper = (valor, alCambiar, etiqueta, foco) => h('span', { class: 'stepper' },
     ui.boton('−', () => alCambiar(-1), 'chico', { 'aria-label': 'Restar ' + etiqueta, 'data-foco': foco + '-m' }),
-    h('output', { text: sg(valor), 'aria-label': etiqueta }),
+    salida(valor, etiqueta),
     ui.boton('+', () => alCambiar(1), 'chico', { 'aria-label': 'Sumar ' + etiqueta, 'data-foco': foco + '-p' }));
 
   /* Se redibuja solo en cada cambio (S.enlaces), así las cifras siguen lo que tecleas sin perder el foco. */
@@ -27,7 +33,8 @@
         h('div', {}, h('strong', { class: 'cifra', text: c.dureza }), h('span', { text: 'CA de dureza' })),
         h('div', {}, h('strong', { class: 'cifra', text: c.toque }), h('span', { text: 'CA al toque' })),
         h('div', {}, h('strong', { class: 'cifra', text: sg(c.defensa) }), h('span', { text: 'DES aplicada' })),
-        h('div', {}, h('strong', { class: 'cifra', text: c.proteccion }), h('span', { text: 'Protección de armadura' }))),
+        h('div', {}, h('strong', { class: 'cifra', text: c.proteccion + c.equipoCA }), h('span', { text: 'Protección (armadura y equipo)' })),
+        h('div', {}, h('strong', { class: 'cifra', text: sg(c.magia + c.equipoMag) }), h('span', { text: 'Bono mágico total' }))),
       h('p', { class: 'ayuda', text: `Peto: ${c.clase === 'Ninguna' ? 'sin armadura' : c.clase}. ${c.limite}${c.defensaNatural !== c.defensa ? ` (tu DES da ${sg(c.defensaNatural)}, se aplica ${sg(c.defensa)})` : ''}. Dureza: lo que hay que superar para penetrar la armadura (sin DES). Toque: solo DES y magia.` }),
       est ? h('p', { class: 'meta', text: `Estilo de pelea: ${est.etiqueta}, ${sg(est.valor)} de CA.` }) : null,
       c.artes.arte ? h('p', { class: 'meta' + (c.artes.arteActiva ? '' : ' apagada'), text: `Artes marciales (${c.artes.arte.nombre}): ${sg(c.artes.arte.valor)} de CA en total y al toque · ${c.artes.arteActiva ? 'activa' : 'inactiva, ' + c.artes.motivo}. Es el mejor de tus artes; no se acumulan.` }) : null,
@@ -41,14 +48,14 @@
 
   function pieza(S, k, titulo, cob) {
     const x = S.pj.armadura[k], chip = h('span', { class: 'etiqueta' });
-    const pintar = r => { chip.textContent = 'Protección ' + r.ca.piezas.find(p => p.parte === k).valor; };
+    const pintar = r => { const p = r.ca.piezas.find(q => q.parte === k), m = U.num(p.magico); chip.textContent = m ? `Protección ${p.valor + m} (${p.valor} base ${U.signo(m)} mágico)` : 'Protección ' + p.valor; };
     pintar(S.r); S.enlaces.push(pintar);
     return h('div', { class: 'tarjeta-arma' },
       h('div', { class: 'tarjeta-cab' }, h('strong', { text: titulo }), chip),
       h('div', { class: 'rejilla g2' },
         ui.campo('Tipo', ui.select(opcionesArmadura(S), x.tipo, v => S.cambiar(pj => { pj.armadura[k].tipo = v; }), { 'data-foco': 'arm-' + k })),
         cob ? ui.campo('Cobertura', ui.select([{ v: '2', t: cob[0] }, { v: '1', t: cob[1] }], String(x.cob), v => S.cambiar(pj => { pj.armadura[k].cob = Number(v); }), { 'data-foco': 'arm-cob-' + k })) : null),
-      h('div', { class: 'fila-pips' }, h('span', { text: 'Bono mágico' }), stepper(x.magico, d => S.cambiar(pj => { pj.armadura[k].magico = U.num(pj.armadura[k].magico) + d; }), 'bono mágico de ' + titulo, 'arm-mag-' + k)),
+      h('div', { class: 'fila-pips' }, h('span', { text: 'Bono mágico' }), stepper(() => S.pj.armadura[k].magico, d => S.cambiar(pj => { pj.armadura[k].magico = U.num(pj.armadura[k].magico) + d; }), 'bono mágico de ' + titulo, 'arm-mag-' + k)),
       ui.campo('Nombre o notas', ui.texto(x.nota, v => S.cambiar(pj => { pj.armadura[k].nota = v; }), { 'data-foco': 'arm-nota-' + k, placeholder: 'Peto de mithril, propiedad especial…' })));
   }
 
@@ -91,8 +98,8 @@
       filas.length ? h('div', { class: 'lista-armas' }, filas) : h('p', { class: 'vacio', text: 'Sin bonos generales.' }),
       ui.boton('+ Agregar bono', () => S.cambiar(pj => { pj.armadura.generales.push({ origen: '', valor: 0, aplica: 'total' }); }, { estructura: true }), 'chico', { 'data-foco': 'bg-add' }),
       h('div', { class: 'rejilla g2' },
-        ui.campo('Ajuste manual de CA (negativo mejora)', stepper(ar.manual, d => S.cambiar(pj => { pj.armadura.manual = U.num(pj.armadura.manual) + d; }), 'ajuste manual', 'arm-man')),
-        ui.campo('Otros bonos extraordinarios (negativo mejora)', stepper(ar.extra, d => S.cambiar(pj => { pj.armadura.extra = U.num(pj.armadura.extra) + d; }), 'bono extraordinario', 'arm-ext'))),
+        ui.campo('Ajuste manual de CA (negativo mejora)', stepper(() => S.pj.armadura.manual, d => S.cambiar(pj => { pj.armadura.manual = U.num(pj.armadura.manual) + d; }), 'ajuste manual', 'arm-man')),
+        ui.campo('Otros bonos extraordinarios (negativo mejora)', stepper(() => S.pj.armadura.extra, d => S.cambiar(pj => { pj.armadura.extra = U.num(pj.armadura.extra) + d; }), 'bono extraordinario', 'arm-ext'))),
       ui.campo('Notas de defensa', ui.area(ar.notas, v => S.cambiar(pj => { pj.armadura.notas = v; }), { rows: 2, 'data-foco': 'arm-notas', placeholder: 'Cobertura, efectos del DM, habilidades temporales…' })));
   }
 

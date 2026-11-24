@@ -89,6 +89,8 @@
     return ui.bloque('Puntos de golpe',
       h('div', { class: 'rejilla g3' },
         ui.campo('Cómo se calculan', ui.select([{ v: 'maximo', t: 'Dado máximo en cada nivel' }, { v: 'tirada', t: 'Anoto mis tiradas' }], S.pj.pg.modo, v => S.cambiar(pj => { pj.pg.modo = v; }, { estructura: true }), { 'data-foco': 'pg-modo' })),
+        S.pj.trayectoria === 'multi' ? ui.campo('Redondeo al repartir entre clases', ui.select([{ v: 'arriba', t: 'Hacia arriba (regla de la mesa)' }, { v: 'abajo', t: 'Hacia abajo (PHB)' }], S.pj.pg.redondeo, v => S.cambiar(pj => { pj.pg.redondeo = v; }, { estructura: true }), { 'data-foco': 'pg-redondeo' })) : null,
+        S.pj.trayectoria === 'multi' ? ui.campo('PG fijos tras el nivel de nombre', ui.select([{ v: 'no', t: 'Completos en cada clase' }, { v: 'si', t: 'Divididos entre las clases' }], S.pj.pg.fijosDivididos ? 'si' : 'no', v => S.cambiar(pj => { pj.pg.fijosDivididos = v === 'si'; }, { estructura: true }), { 'data-foco': 'pg-fijos' })) : null,
         ui.campo('PG actuales', h('div', { class: 'junto' }, actual, h('span', { class: 'sobre' }, '/ ', totales.max)))),
       h('div', { class: 'fila-edit' },
         ui.boton('Llenar PG al máximo', () => S.cambiar(pj => { pj.pg.actual = S.r.pg.max; }, { estructura: true }), 'primario', { 'data-foco': 'pg-llenar' }),

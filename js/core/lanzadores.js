@@ -15,11 +15,12 @@
   CJ.lanzador = id => CJ.lanzadores().find(x => x.id === id) || null;
 
   /* Esferas de un conjuro divino: se leen del texto ("Elemental (Agua, Aire), Adivinación"). Un conjuro propio puede traer `esferas`. */
-  const cacheEsf = new Map();
+  const cacheEsf = new Map(); let cacheVer = null;
   CJ.esferasDe = sp => {
     if (Array.isArray(sp.esferas)) return sp.esferas;
+    if (cacheVer !== A.esferasActuales) { cacheEsf.clear(); cacheVer = A.esferasActuales; }
     const clave = sp.id + '|' + (sp.esfera || ''); if (cacheEsf.has(clave)) return cacheEsf.get(clave);
-    const validas = new Set((A.base.esferas || []).map(e => e.id)), out = [], txt = String(sp.esfera || '');
+    const validas = new Set(A.listaEsferas().map(e => e.id)), out = [], txt = String(sp.esfera || '');
     let prof = 0, cur = ''; const toks = [];
     for (const ch of txt) { if (ch === '(') prof++; if (ch === ')') prof--; if (ch === ',' && prof === 0) { toks.push(cur); cur = ''; } else cur += ch; }
     toks.push(cur);
@@ -29,7 +30,7 @@
     });
     cacheEsf.set(clave, out); return out;
   };
-  CJ.nombreEsfera = id => { const e = (A.base.esferas || []).find(x => x.id === id); return e ? e.nombre : id; };
+  CJ.nombreEsfera = id => { const e = A.listaEsferas().find(x => x.id === id); return e ? e.nombre : id; };
 
   /* Conjuros adicionales por SAB: se acumulan las filas 1..SAB. Devuelve cuántos espacios extra hay por nivel de conjuro (9) y el % de fallo. */
   CJ.bonoSab = car => {
@@ -110,7 +111,7 @@
   cl.fuente = (pj, id, f) => { E(pj, id).fuente = f === 'deidad' ? 'deidad' : 'manual'; return null; };
   cl.esfera = (pj, id, cual, esf, on) => {
     const e = E(pj, id).esferas, otro = cual === 'mayores' ? 'menores' : 'mayores';
-    if (!(A.base.esferas || []).some(x => x.id === esf)) return 'Esa esfera no existe.';
+    if (!A.esferaValida(esf)) return 'Esa esfera no existe.';
     e[cual] = e[cual].filter(x => x !== esf); if (on) { e[cual].push(esf); e[otro] = e[otro].filter(x => x !== esf); }
     return null;
   };

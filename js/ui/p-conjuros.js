@@ -228,11 +228,12 @@
     let esferas = null;
     if (divino) {
       const dd = r.deidad, tieneEsf = !!(dd && dd.esferas);
-      const marcas = (cual) => h('div', { class: 'checks' }, (A.base.esferas || []).filter(e => !r.fijas.mayores.includes(e.id) && !r.fijas.menores.includes(e.id)).map(e => h('label', { class: 'check' },
+      const marcas = (cual) => h('div', { class: 'checks' }, A.listaEsferas().filter(e => !r.fijas.mayores.includes(e.id) && !r.fijas.menores.includes(e.id)).map(e => h('label', { class: 'check' },
         h('input', { type: 'checkbox', checked: st.esferas[cual].includes(e.id), 'data-foco': `cl-esf-${id}-${cual}-${e.id}`, onchange: ev => hacer(S, pj => L.esfera(pj, id, cual, e.id, ev.target.checked)) }), ' ' + e.nombre)));
-      esferas = plegable('cl-esferas-' + id, 'Esferas, deidad y habilidades del dios', false, `mayores: ${r.acceso.mayores.length} · menores: ${r.acceso.menores.length}`,
+      esferas = plegable('cl-esferas-' + id, 'Esferas, deidad y habilidades del dios', !r.acceso.mayores.length && !r.acceso.menores.length, `mayores: ${r.acceso.mayores.length} · menores: ${r.acceso.menores.length}`,
         h('p', { class: 'ayuda', text: `Esferas de la clase — mayores: ${nombresEsf(r.fijas.mayores)}; menores: ${nombresEsf(r.fijas.menores)}. Las mayores llegan hasta tu nivel máximo de conjuro; las menores, hasta el nivel 3.` }),
         h('div', { class: 'rejilla g3' }, ui.campo('Esferas adicionales', ui.select([{ v: 'manual', t: 'Las que elija a mano' }].concat(tieneEsf ? [{ v: 'deidad', t: `Las de mi deidad (${dd.nombre})` }] : []), tieneEsf ? st.fuente : 'manual', v => hacer(S, pj => L.fuente(pj, id, v)), { 'data-foco': `cl-fuente-${id}` }))),
+        !r.acceso.mayores.length && !r.acceso.menores.length ? h('p', { class: 'aviso', text: 'Aún no tienes esferas: elige las mayores y menores de tu deidad (o toma las de la deidad registrada) para ver conjuros.' }) : null,
         !tieneEsf ? h('p', { class: 'meta', text: dd ? `Tu deidad (${dd.nombre}) no define esferas: agrégalas en Homebrew → Deidades para tomarlas de ahí.` : 'Elige una deidad en la pestaña Ficha, con esferas definidas en Homebrew → Deidades, para tomar sus esferas.' }) : null,
         tieneEsf && st.fuente === 'deidad' ? h('p', { text: `Deidad ${dd.nombre} — mayores: ${nombresEsf(dd.esferas.mayores)}; menores: ${nombresEsf(dd.esferas.menores)}.` }) : [
           h('div', { class: 'campo' }, h('span', { class: 'campo-et', text: 'Esferas mayores adicionales' }), marcas('mayores')),

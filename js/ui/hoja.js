@@ -59,10 +59,10 @@
   /* Ranuras de equipo (de la pestaña Armadura): todas, para anotar a mano, o solo las usadas. */
   function ranurasHoja(S, todas) {
     const eq = S.pj.armadura.equipo, filas = A.base.ranurasEquipo.map(([k, t]) => ({ t, q: eq[k] || {} })).filter(x => todas || x.q.nombre || x.q.ca || x.q.magico);
-    const r = S.r, piezas = ['torso', 'brazos', 'piernas'].map(k => r.ca.piezas.find(p => p.parte === k)).filter(p => p && p.armadura).map(p => ({ t: { torso: 'Cuerpo', brazos: 'Brazos', piernas: 'Piernas' }[p.parte], n: p.armadura.nombre + (p.magico ? ' +' + p.magico : '') }));
+    const r = S.r, piezas = ['torso', 'brazos', 'piernas'].map(k => r.ca.piezas.find(p => p.parte === k)).filter(p => p && p.armadura).map(p => ({ t: { torso: 'Cuerpo', brazos: 'Brazos', piernas: 'Piernas' }[p.parte], n: p.armadura.nombre + (p.magico ? ' +' + p.magico : ''), ca: p.valor + (Number(p.magico) || 0) }));
     const armas = (r.armas ? r.armas.instancias : []).map(x => (x.inst.nombre || (x.arma && x.arma.nombre) || '')).filter(Boolean);
     return h('table', { class: 'h-tabla h-ranuras' }, h('thead', {}, h('tr', {}, ['Ranura', 'Objeto', 'CA'].map(t => h('th', { text: t })))),
-      h('tbody', {}, piezas.map(x => h('tr', {}, h('th', { text: x.t }), h('td', { text: x.n }), h('td', { text: '' }))),
+      h('tbody', {}, piezas.map(x => h('tr', {}, h('th', { text: x.t }), h('td', { text: x.n }), h('td', { text: x.ca ? U.signo(x.ca) : '' }))),
         filas.map(x => h('tr', {}, h('th', { text: x.t }), h('td', { text: x.q.nombre || '' }), h('td', { text: x.q.ca || x.q.magico ? U.signo((Number(x.q.ca) || 0) + (Number(x.q.magico) || 0)) : '' }))),
         todas ? [h('tr', {}, h('th', { text: 'Arma' }), h('td', { text: armas[0] || '' }), h('td', {})), h('tr', {}, h('th', { text: 'Arma alterna' }), h('td', { text: armas[1] || '' }), h('td', {}))] : null));
   }
@@ -126,11 +126,11 @@
       r.artes.artes.length ? h('div', {}, h('h2', { text: 'Artes marciales' }), r.artes.artes.map(a => a.faltante ? null : h('p', { class: 'p' }, h('strong', { text: a.nombre + ': ' }),
         `${a.atk} ataque(s)/round · daño ${a.dano} · CA ${U.signo(a.ac)} · RT ${a.rt}${a.movs.some(m => m.adquirido) ? ' · ' + a.movs.filter(m => m.adquirido).map(m => `${m.nombre} (${m.k})`).join(', ') : ''}`)),
         r.ca.artes.arte ? h('p', { class: 'p', text: `CA marcial ${U.signo(r.ca.artes.arte.valor)} (${r.ca.artes.arte.nombre}): ${r.ca.artes.arteActiva ? 'activa' : 'inactiva, ' + r.ca.artes.motivo}.` }) : null) : null,
-      r.conjuros.mago.activo ? h('div', {}, h('h2', { text: 'Magia (mago)' }),
+      r.conjuros.mago.activo && r.conjuros.mago.nivel > 0 ? h('div', {}, h('h2', { text: 'Magia (mago)' }),
         h('p', { class: 'p', text: [`Nivel ${r.conjuros.mago.nivel || '—'}`, r.conjuros.mago.especialidad ? `${r.conjuros.mago.especialidad.nombreEspecialista} (${r.conjuros.mago.especialidad.nombre})` : 'generalista', r.conjuros.mago.modo === 'puntos' ? `puntos de conjuro ${r.conjuros.mago.puntos.restan}/${r.conjuros.mago.puntos.total}` : `espacios ${r.conjuros.mago.espacios.map((v, i) => v + r.conjuros.mago.extra[i]).join('/')}`].join(' · ') }),
         r.conjuros.mago.modo === 'memorizar' ? r.conjuros.mago.niveles.filter(n => n.preparados).map(n => h('p', { class: 'p' }, h('strong', { text: `Nivel ${n.n}: ` }), n.memorizados.map(x => x.sp.nombre + (x.inv ? ' (inv.)' : '') + (x.usado ? ' ✗' : '')).join(', '))) : null,
         r.conjuros.mago.libro.length ? h('p', { class: 'p', text: 'Libro: ' + r.conjuros.mago.libro.map(x => `${x.nombre} (${x.nv})`).join(', ') }) : null) : null,
-      r.conjuros.hechicero.activo ? h('div', {}, h('h2', { text: 'Magia (hechicero)' }),
+      r.conjuros.hechicero.activo && r.conjuros.hechicero.nivel > 0 ? h('div', {}, h('h2', { text: 'Magia (hechicero)' }),
         h('p', { class: 'p', text: `Nivel ${r.conjuros.hechicero.nivel || '—'} · ${r.conjuros.hechicero.linaje ? 'linaje ' + r.conjuros.hechicero.linaje.nombre : 'sin linaje'} · puntos de conjuro ${r.conjuros.hechicero.puntos.restan}/${r.conjuros.hechicero.puntos.total}` }),
         r.conjuros.hechicero.habilidades.filter(x => x.activa).map(x => h('p', { class: 'p' }, h('strong', { text: x.nombre + ': ' }), x.texto)),
         r.conjuros.hechicero.niveles.filter(n => n.abierto).map(n => h('p', { class: 'p' }, h('strong', { text: `Nivel ${n.n}: ` }), n.destinados.concat(n.elegidos).map(x => x.sp.nombre + (x.inv ? ' (inv.)' : '')).join(', ')))) : null,
@@ -154,14 +154,14 @@
         r.psionica.talento.poderes.length ? h('p', { class: 'p', text: r.psionica.talento.poderes.map(p => `${p.nombre}${p.objetivo ? ' (' + p.objetivo.valor + ')' : ''}`).join(', ') }) : null,
         r.psionica.talento.secuelas.filter(x => x.texto).length ? h('p', { class: 'p', text: 'Secuelas: ' + r.psionica.talento.secuelas.filter(x => x.texto).map(x => x.texto).join('; ') }) : null,
         r.psionica.talento.notas ? h('p', { class: 'p', text: r.psionica.talento.notas }) : null) : null,
-      r.conjuros.brujo && r.conjuros.brujo.activo ? h('div', {}, h('h2', { text: 'Magia (brujo)' }),
+      r.conjuros.brujo && r.conjuros.brujo.activo && r.conjuros.brujo.nivel > 0 ? h('div', {}, h('h2', { text: 'Magia (brujo)' }),
         h('p', { class: 'p', text: [`Nivel ${r.conjuros.brujo.nivel || '—'}`, r.conjuros.brujo.pacto ? r.conjuros.brujo.pacto.nombre : 'sin pacto', `espacios ${r.conjuros.brujo.espacios.join('/').replace(/(\/0)+$/, '')}`, `puntos de pacto ${r.conjuros.brujo.puntos.restan}/${r.conjuros.brujo.puntos.total}`, `reacción CAR ${r.conjuros.brujo.ajuste >= 0 ? '+' : '−'}${Math.abs(r.conjuros.brujo.ajuste)}`].join(' · ') }),
         r.conjuros.brujo.tecnicas.filter(t => t.activa && (t.nombre || t.efecto)).map(t => h('p', { class: 'p' }, h('strong', { text: `${t.nombre} (${t.pasiva ? 'pasiva' : t.costo + ' pt'}): ` }), t.efecto)),
         r.conjuros.brujo.niveles.filter(n => n.preparados).map(n => h('p', { class: 'p' }, h('strong', { text: `Nivel ${n.n}: ` }), n.memorizados.map(q => q.sp.nombre + (q.inv ? ' (inv.)' : '') + (q.usado ? ' ✗' : '')).join(', '))),
         r.conjuros.brujo.conocidos.length ? h('p', { class: 'p', text: 'Concedidos: ' + r.conjuros.brujo.conocidos.map(q => `${q.nombre} (${q.nv})`).join(', ') }) : null,
         r.conjuros.brujo.favores.filter(f => !f.cumplido && f.texto).length ? h('p', { class: 'p', text: 'Favores pendientes: ' + r.conjuros.brujo.favores.filter(f => !f.cumplido && f.texto).map(f => f.texto).join('; ') }) : null,
         r.conjuros.brujo.notas ? h('p', { class: 'p', text: r.conjuros.brujo.notas }) : null) : null,
-      Object.values(r.conjuros.clases).filter(x => x.activo).map(x => h('div', {}, h('h2', { text: 'Magia (' + x.nombre.toLowerCase() + ')' }),
+      Object.values(r.conjuros.clases).filter(x => x.activo && x.nivel > 0).map(x => h('div', {}, h('h2', { text: 'Magia (' + x.nombre.toLowerCase() + ')' }),
         h('p', { class: 'p', text: [`Nivel ${x.nivel || '—'}`, x.modo === 'puntos' ? `puntos de conjuro ${x.puntos.restan}/${x.puntos.total}` : `espacios ${x.espacios.join('/').replace(/(\/0)+$/, '')}`, x.tipo === 'divino' ? 'esferas: ' + x.acceso.mayores.map(A.reglas.conjuros.nombreEsfera).concat(x.acceso.menores.map(e => A.reglas.conjuros.nombreEsfera(e) + ' (menor)')).join(', ') : ''].filter(Boolean).join(' · ') }),
         x.modo === 'memorizar' ? x.niveles.filter(n => n.preparados).map(n => h('p', { class: 'p' }, h('strong', { text: `Nivel ${n.n}: ` }), n.memorizados.map(q => q.sp.nombre + (q.inv ? ' (inv.)' : '') + (q.usado ? ' ✗' : '')).join(', '))) : null,
         x.libroPropio && x.libro.length ? h('p', { class: 'p', text: 'Libro: ' + x.libro.map(q => `${q.nombre} (${q.nv})`).join(', ') }) : null,

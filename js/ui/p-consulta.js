@@ -85,6 +85,7 @@
     (k.habilidades || []).length ? h('ul', { class: 'cj-lista' }, k.habilidades.map(x => h('li', {}, typeof x === 'string' ? x : [x.nombre ? h('strong', { text: x.nombre + ': ' }) : null, x.texto || x.nota || '']))) : null];
   D.linaje = (S, l) => [parrafo(l.desc), subtitulo('Habilidades'), h('ul', { class: 'cj-lista' }, (l.habilidades || []).map(x => h('li', {}, h('strong', { text: `Nivel ${x.nivel}: ${x.nombre}. ` }), x.texto))),
     (l.conjuros || []).some(a => a && a.length) ? [subtitulo('Conjuros del linaje'), h('ul', { class: 'cj-lista' }, l.conjuros.map((a, i) => (a && a.length ? h('li', {}, h('strong', { text: `Nivel ${i + 1}: ` }), a.map(x => nombreCj(S.reg, x.id)).join(', ')) : null)))] : null];
+  D.esfera = (S, e) => [parrafo(e.desc)];
   D.escuelaMagia = (S, e) => [parrafo(e.desc), e.especialista ? [lin('Especialista', e.especialista.nombre), lin('Escuelas prohibidas', (e.especialista.prohibidas || []).map(i => (S.reg.escuelaMagia(i) || { nombre: i }).nombre).join(', ')),
     h('ul', { class: 'cj-lista' }, (e.especialista.poderes || []).map(p => h('li', {}, h('strong', { text: `Nivel ${p.nivel}: ` }), p.texto)))] : null];
   D.pericia = (S, p) => [lin('Costo', p.costo + ' espacio(s)'), lin('Característica', p.car ? `${p.car}${p.mod ? ' ' + signo(p.mod) : ''}` : ''), lin('Categorías', (p.cats || []).map(c => A.base.categoriasPericias[c] || c).join(', ')), lin('En inglés', p.ingles && p.ingles !== p.nombre ? p.ingles : ''),
@@ -134,11 +135,12 @@
     C('conjuros', 'Magia', 'Conjuros', 'conjuro', S => S.reg.conjuros.map(x => stdItem(x, `${x.tipo === 'divino' ? 'divino' : 'arcano'} · nv ${x.nv}`)), D.conjuro, [
       { k: 'tipo', et: 'Tipo', op: () => [{ v: '', t: 'Arcanos y divinos' }, { v: 'arcano', t: 'Arcanos' }, { v: 'divino', t: 'Divinos' }], ok: (it, v) => it.data.tipo === v },
       { k: 'nv', et: 'Nivel', op: () => [{ v: '', t: 'Todos los niveles' }].concat(Array.from({ length: 9 }, (_, i) => ({ v: String(i + 1), t: 'Nivel ' + (i + 1) }))), ok: (it, v) => String(it.data.nv) === v },
-      { k: 'esc', et: 'Escuela o esfera', op: S => [{ v: '', t: 'Todas las escuelas y esferas' }].concat(S.reg.escuelasMagia.map(e => ({ v: e.id, t: e.nombre })), (A.base.esferas || []).map(e => ({ v: e.id, t: 'Esfera: ' + e.nombre }))),
+      { k: 'esc', et: 'Escuela o esfera', op: S => [{ v: '', t: 'Todas las escuelas y esferas' }].concat(S.reg.escuelasMagia.map(e => ({ v: e.id, t: e.nombre })), A.listaEsferas().map(e => ({ v: e.id, t: 'Esfera: ' + e.nombre }))),
         ok: (it, v) => (it.data.escuelas || []).includes(v) || (A.reglas.conjuros && A.reglas.conjuros.esferasDe(it.data).includes(v)) }
     ]),
     C('pactos', 'Magia', 'Pactos del brujo', 'pacto', S => S.reg.pactos.map(x => stdItem(x)), D.pacto),
     C('escuelasMagia', 'Magia', 'Escuelas de magia', 'escuelaMagia', S => S.reg.escuelasMagia.map(x => stdItem(x)), D.escuelaMagia),
+    C('esferas', 'Magia', 'Esferas de sacerdote', 'esfera', S => S.reg.esferas.map(x => stdItem(x)), D.esfera),
     C('linajes', 'Magia', 'Linajes de hechicero', 'linaje', S => S.reg.linajes.map(x => stdItem(x)), D.linaje),
     C('poderesPsi', 'Psiónica', 'Poderes psiónicos', 'poderPsi', S => S.reg.poderesPsi.map(x => stdItem(x, `${x.disc} · ${x.tipo === 'ciencia' ? 'ciencia' : 'devoción'}`)), D.poderPsi, [
       { k: 'disc', et: 'Disciplina', op: S => [{ v: '', t: 'Todas las disciplinas' }].concat(S.reg.disciplinasPsi.map(d => ({ v: d.nombre, t: d.nombre }))), ok: (it, v) => it.data.disc === v },

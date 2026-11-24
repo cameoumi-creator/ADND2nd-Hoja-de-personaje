@@ -192,6 +192,15 @@ Ficha con columnas equilibradas, Equipo con el resumen de riqueza en una línea 
 - **Hoja de conjuros**: una página por clase lanzadora (Mago, Bardo, Hechicero, Brujo, Sacerdote, Druida…), con una tabla por nivel de conjuro: nombre, casilla **Mem.** (cuántas veces lo tienes memorizado) y casilla **Mat.** (componentes materiales), más renglones en blanco. Mago, Bardo, Hechicero y Brujo listan su libro o conocidos; Sacerdote y Druida listan todos los conjuros de sus esferas.
 - **Movimiento** (pestaña Combate y hojas): base de la raza (12 humano/elfo/semielfo…, 6 enano/gnomo/mediano; una raza homebrew puede fijar el suyo), o el de la clase si es mayor (Bárbaro 18), más bonos (objetivo "Movimiento" en Bonos manuales). La carga lo reduce: Cargado a la mitad, Sobrecargado a un tercio.
 
+### PG en multiclase y dual, esferas, compañeros y armadura
+- **Multiclase:** cada dado y el bono de CON se reparten entre las clases, cada dado por separado (también en el nivel 1). El bono de CON es el mejor de las clases (luchador +3/+4). Opción por personaje: redondeo hacia arriba (regla de la mesa, por defecto) o hacia abajo (PHB, mínimo 1 por dado); los PG fijos tras el nivel de nombre pueden repartirse o no.
+- **Dual (también encadenado):** la primera clase da todos sus PG; cada clase siguiente solo da PG por los niveles que superan el nivel más alto de las anteriores.
+- **Sacerdote especialista:** ya no trae todas las esferas; se eligen (mayores y menores) o se toman de la deidad. La sección se abre sola mientras no haya esferas.
+- **Mascotas y Familiar:** una lista plegable (resumen con miniatura, nombre, PG y CA); la imagen y su URL ocupan una sola línea.
+- **Armadura:** el contador de cada pieza y el resumen muestran el bono mágico; la hoja impresa lo muestra en la columna CA.
+- **Esferas homebrew:** Homebrew → Magia → Esferas de sacerdote crea esferas nuevas. Al crear un conjuro divino las esferas se eligen de un desplegable (base + homebrew), sin escribirlas; las deidades, los sacerdotes y los patrones del brujo también las usan. Viajan en el archivo del personaje y en los paquetes. También salen en Consulta → Magia.
+- **Impresión:** solo salen las secciones de magia de clases presentes (nivel > 0).
+
 ### Pericias: descripciones
 
 Las 226 pericias del catálogo traen su descripción (en el catálogo y en las aprendidas); las pericias propias de Homebrew tienen un campo de descripción que viaja en los paquetes. Las habilidades de Bribón parten de 40% en Escalar paredes y 15% en Escuchar ruidos para cualquier criatura; las bases de clase se respetan si son mayores.

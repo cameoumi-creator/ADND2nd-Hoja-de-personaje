@@ -620,3 +620,15 @@ dialog.imp::backdrop { background: rgba(0, 0, 0, .55); }
 .eq-riq-b .eq-tot { margin: 0 0 .2rem; }
 .eq-riq-d > summary { font-weight: 400; color: var(--grafito); }
 .poder { padding: .35rem 0; border-bottom: 1px solid var(--linea); } .poder p { margin: .15rem 0 0; } .poder.apagada { opacity: .55; }
+
+/* Compañeros: lista plegable (mascotas y familiar) y campo de imagen compacto */
+.cp-lista { border: 1px solid var(--linea); border-radius: .4rem; margin-bottom: .6rem; }
+.cp-pleg { border-bottom: 1px solid var(--linea); } .cp-pleg:last-child { border-bottom: 0; }
+.cp-pleg > summary { display: flex; align-items: center; gap: .6rem; padding: .35rem .6rem; cursor: pointer; flex-wrap: wrap; }
+.cp-pleg > summary .meta { flex: 1 1 10rem; }
+.cp-mini { width: 1.8rem; height: 1.8rem; border: 1px solid var(--linea); background: var(--campo); flex: 0 0 auto; overflow: hidden; border-radius: .25rem; }
+.cp-mini img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cp-pleg-cuerpo { padding: .4rem .6rem .6rem; border-top: 1px dashed var(--linea); }
+.im-compacto { gap: .5rem; align-items: center; } .im-compacto .im-chica { width: 3.2rem; }
+.im-compacto .im-ctrl { flex-direction: row; flex-wrap: wrap; align-items: center; gap: .4rem; flex: 1 1 14rem; }
+.im-compacto .im-url { flex: 1 1 12rem; width: auto; }

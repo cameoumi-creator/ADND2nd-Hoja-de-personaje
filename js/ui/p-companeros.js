@@ -11,7 +11,7 @@
   /* Campo de texto ligado a una ruta del objeto del personaje (S.pj.companeros...). */
   const tx = (S, get, k, et, foco, extra) => ui.campo(et, ui.texto(get()[k], v => S.cambiar(() => { get()[k] = v; }), { 'data-foco': foco, maxlength: 300 }), extra);
   const ar = (S, get, k, et, foco, filas) => ui.campo(et, ui.area(get()[k], v => S.cambiar(() => { get()[k] = v; }), { rows: filas || 3, 'data-foco': foco }), 'ancho-todo');
-  const imagen = (S, get, foco, titulo) => ui.imagenCampo(S, { valor: get().img, alCambiar: v => S.cambiar(() => { get().img = v; }, { estructura: true }), max: 192, limite: A.IMG_CHICA, titulo, foco, forma: 'chica' });
+  const imagen = (S, get, foco, titulo) => ui.imagenCampo(S, { valor: get().img, alCambiar: v => S.cambiar(() => { get().img = v; }, { estructura: true }), max: 192, limite: A.IMG_CHICA, titulo, foco, forma: 'chica', compacto: true });
 
   /* Tabla de filas fijas (seguidores, aprendices). */
   function tabla(S, filas, cols, pref) {
@@ -34,25 +34,46 @@
     return [base, seg, bTropa, bGremio, bApr];
   }
 
+  /* Fila plegable: el resumen siempre visible y los datos al abrir. Lo abierto se recuerda mientras dure la sesión. */
+  const abiertos = new Set();
+  function fila(S, clave, get, cab, cuerpo) {
+    const mini = h('span', { class: 'cp-mini' }), tit = h('strong', {}), meta = h('span', { class: 'meta' });
+    const pintar = () => {
+      const x = get(); if (!x) return;
+      mini.replaceChildren(...[x.img ? h('img', { src: x.img, alt: '', referrerpolicy: 'no-referrer' }) : null].filter(Boolean));
+      tit.textContent = x.nombre || 'Sin nombre'; meta.textContent = cab(x).filter(Boolean).join(' · ');
+    };
+    pintar(); S.enlaces.push(pintar);
+    const d = h('details', { class: 'cp-pleg' }, h('summary', { 'data-foco': 'cp-pleg-' + clave }, mini, tit, meta), h('div', { class: 'cp-pleg-cuerpo' }, cuerpo));
+    d.open = abiertos.has(clave);
+    d.addEventListener('toggle', () => { if (d.open) abiertos.add(clave); else abiertos.delete(clave); });
+    return d;
+  }
+
   function mascotas(S) {
     const l = S.pj.companeros.mascotas, get = id => () => S.pj.companeros.mascotas.find(m => m.id === id);
-    return [ui.bloque('Mascotas', h('p', { class: 'ayuda', text: 'Animales de compañía o de guerra. No son familiar ni séquito.' }),
-      l.length ? l.map((m, i) => { const g = get(m.id), f = 'cp-m-' + m.id; return h('div', { class: 'cp-fila' }, h('div', { class: 'cp-card' }, imagen(S, g, 'img-m-' + m.id, 'Imagen de la mascota'),
-        h('div', { class: 'cp-datos' }, h('div', { class: 'rejilla g3' }, tx(S, g, 'nombre', 'Nombre', f + '-n'), tx(S, g, 'especie', 'Especie', f + '-e'), tx(S, g, 'dg', 'DG / Nv', f + '-dg'), tx(S, g, 'pg', 'PG', f + '-pg'), tx(S, g, 'ca', 'CA', f + '-ca'), tx(S, g, 'gac0', 'GAC0', f + '-g'), tx(S, g, 'ataque', 'Ataque / daño', f + '-a'), tx(S, g, 'mov', 'Movimiento', f + '-mov')),
-          ar(S, g, 'notas', 'Trucos / notas', f + '-notas'), h('div', { class: 'hi-cab' }, ui.boton('Eliminar', () => S.cambiar(pj => { pj.companeros.mascotas = pj.companeros.mascotas.filter(x => x.id !== m.id); }, { estructura: true }), 'chico peligro', { 'data-foco': f + '-del' }))))); }) : h('p', { class: 'vacio', text: 'Sin mascotas.' }),
-      ui.boton('Agregar mascota', () => S.cambiar(pj => { pj.companeros.mascotas.push(A.normalizarCompaneros({ mascotas: [{ id: nuevoId() }] }).mascotas[0]); }, { estructura: true }), 'chico', { 'data-foco': 'cp-m-nueva' }))];
+    return [ui.bloque('Mascotas', h('p', { class: 'ayuda', text: 'Animales de compañía o de guerra. No son familiar ni séquito. Abre una fila para ver y editar sus datos.' }),
+      l.length ? h('div', { class: 'cp-lista' }, l.map(m => {
+        const g = get(m.id), f = 'cp-m-' + m.id;
+        return fila(S, f, g, x => [x.especie, x.dg && 'DG ' + x.dg, x.pg && 'PG ' + x.pg, x.ca && 'CA ' + x.ca],
+          [h('div', { class: 'rejilla g4' }, tx(S, g, 'nombre', 'Nombre', f + '-n'), tx(S, g, 'especie', 'Especie', f + '-e'), tx(S, g, 'dg', 'DG / Nv', f + '-dg'), tx(S, g, 'pg', 'PG', f + '-pg'), tx(S, g, 'ca', 'CA', f + '-ca'), tx(S, g, 'gac0', 'GAC0', f + '-g'), tx(S, g, 'ataque', 'Ataque / daño', f + '-a'), tx(S, g, 'mov', 'Movimiento', f + '-mov')),
+            h('div', { class: 'cp-card' }, imagen(S, g, 'img-m-' + m.id, 'Imagen de la mascota'), h('div', { class: 'cp-datos' }, ar(S, g, 'notas', 'Trucos / notas', f + '-notas', 2))),
+            h('div', { class: 'hi-cab' }, ui.boton('Eliminar', () => S.cambiar(pj => { pj.companeros.mascotas = pj.companeros.mascotas.filter(x => x.id !== m.id); }, { estructura: true }), 'chico peligro', { 'data-foco': f + '-del' }))]);
+      })) : h('p', { class: 'vacio', text: 'Sin mascotas.' }),
+      ui.boton('Agregar mascota', () => S.cambiar(pj => { const n = A.normalizarCompaneros({ mascotas: [{ id: nuevoId() }] }).mascotas[0]; pj.companeros.mascotas.push(n); abiertos.add('cp-m-' + n.id); }, { estructura: true }), 'chico', { 'data-foco': 'cp-m-nueva' }))];
   }
 
   function familiar(S) {
     const fm = () => S.pj.companeros.familiar;
-    return [ui.bloque('Familiar', h('div', { class: 'cp-card' }, imagen(S, fm, 'img-familiar', 'Imagen del familiar'),
-      h('div', { class: 'cp-datos' }, h('div', { class: 'rejilla g3' }, tx(S, fm, 'nombre', 'Nombre', 'cp-f-nombre'), tx(S, fm, 'tipo', 'Tipo', 'cp-f-tipo'), tx(S, fm, 'dueno', 'Dueño / lanzador', 'cp-f-dueno'), tx(S, fm, 'nmax', 'Nv máx. de conjuro del dueño', 'cp-f-nmax'),
-        tx(S, fm, 'pg', 'PG', 'cp-f-pg'), tx(S, fm, 'ca', 'CA', 'cp-f-ca'), tx(S, fm, 'gac0', 'GAC0', 'cp-f-gac0'), tx(S, fm, 'mov', 'Movimiento', 'cp-f-mov'), tx(S, fm, 'inteligencia', 'Inteligencia', 'cp-f-int'),
-        tx(S, fm, 'alcance', 'Alcance del vínculo', 'cp-f-alc'), tx(S, fm, 'sentidos', 'Sentidos', 'cp-f-sen'), tx(S, fm, 'estado', 'Estado', 'cp-f-est'))))),
-      ui.bloque('Poderes del familiar', h('p', { class: 'ayuda', text: 'Un poder por cada nivel de conjuro que el mago puede lanzar (máximo 9). Deja vacía la línea de los niveles que aún no lanza.' }),
-        h('div', { class: 'tabla-cont' }, h('table', { class: 'cp-tabla' }, h('thead', {}, h('tr', {}, ['Nv', 'Poder', 'Efecto'].map(t => h('th', { text: t })))),
-          h('tbody', {}, fm().poderes.map((p, i) => h('tr', {}, h('td', { text: String(i + 1) }), h('td', {}, ui.texto(p.poder, v => S.cambiar(() => { fm().poderes[i].poder = v; }), { 'aria-label': 'Poder nivel ' + (i + 1), 'data-foco': 'cp-f-p' + i })), h('td', {}, ui.texto(p.efecto, v => S.cambiar(() => { fm().poderes[i].efecto = v; }), { 'aria-label': 'Efecto nivel ' + (i + 1), 'data-foco': 'cp-f-e' + i })))))))),
-      ui.bloque('Vínculo', ar(S, fm, 'vinculo', 'Vínculo / consecuencias si muere', 'cp-f-vinc', 3))];
+    const datos = h('div', { class: 'rejilla g4' }, tx(S, fm, 'nombre', 'Nombre', 'cp-f-nombre'), tx(S, fm, 'tipo', 'Tipo', 'cp-f-tipo'), tx(S, fm, 'dueno', 'Dueño / lanzador', 'cp-f-dueno'), tx(S, fm, 'nmax', 'Nv máx. de conjuro del dueño', 'cp-f-nmax'),
+      tx(S, fm, 'pg', 'PG', 'cp-f-pg'), tx(S, fm, 'ca', 'CA', 'cp-f-ca'), tx(S, fm, 'gac0', 'GAC0', 'cp-f-gac0'), tx(S, fm, 'mov', 'Movimiento', 'cp-f-mov'), tx(S, fm, 'inteligencia', 'Inteligencia', 'cp-f-int'),
+      tx(S, fm, 'alcance', 'Alcance del vínculo', 'cp-f-alc'), tx(S, fm, 'sentidos', 'Sentidos', 'cp-f-sen'), tx(S, fm, 'estado', 'Estado', 'cp-f-est'));
+    const poderes = h('div', { class: 'tabla-cont' }, h('table', { class: 'cp-tabla' }, h('thead', {}, h('tr', {}, ['Nv', 'Poder', 'Efecto'].map(t => h('th', { text: t })))),
+      h('tbody', {}, fm().poderes.map((p, i) => h('tr', {}, h('td', { text: String(i + 1) }), h('td', {}, ui.texto(p.poder, v => S.cambiar(() => { fm().poderes[i].poder = v; }), { 'aria-label': 'Poder nivel ' + (i + 1), 'data-foco': 'cp-f-p' + i })), h('td', {}, ui.texto(p.efecto, v => S.cambiar(() => { fm().poderes[i].efecto = v; }), { 'aria-label': 'Efecto nivel ' + (i + 1), 'data-foco': 'cp-f-e' + i })))))));
+    return [ui.bloque('Familiar', h('p', { class: 'ayuda', text: 'Abre la fila para ver y editar sus datos, poderes y vínculo.' }),
+      h('div', { class: 'cp-lista' }, fila(S, 'cp-familiar', fm, x => [x.tipo, x.pg && 'PG ' + x.pg, x.ca && 'CA ' + x.ca],
+        [datos, h('div', { class: 'cp-card' }, imagen(S, fm, 'img-familiar', 'Imagen del familiar'), h('div', { class: 'cp-datos' }, ar(S, fm, 'vinculo', 'Vínculo / consecuencias si muere', 'cp-f-vinc', 2))),
+          h('h3', { class: 'co-sub', text: 'Poderes (uno por cada nivel de conjuro que el mago puede lanzar; deja vacíos los que aún no)' }), poderes])))];
   }
 
   function registrados(S) {

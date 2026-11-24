@@ -139,23 +139,36 @@
     return tope === null ? b : Math.min(tope, b);
   };
 
+  /* Multiclase: cada dado y el bono de CON se reparten entre las clases (regla de la mesa: se redondea hacia arriba;
+     opción "abajo" = PHB, con mínimo 1 por dado). Cada dado se reparte por separado, también en el nivel 1.
+     Bono de CON: el mejor de las clases (luchador 17-18 = +3/+4). Los PG fijos tras el nivel de nombre solo se
+     reparten si pj.pg.fijosDivididos. Dual (en orden de clases): cada clase solo da PG por los niveles que superan
+     el nivel más alto de las anteriores (la primera, desde el nivel 1). */
   R.pgEntradas = function (pj, items, con) {
-    const out = [], n = Math.max(1, items.length), dual = R.dual(items), tr = pj.trayectoria;
-    items.forEach(x => {
+    const out = [], n = Math.max(1, items.length), tr = pj.trayectoria, multi = tr === 'multi' && n > 1;
+    const arriba = pj.pg.redondeo !== 'abajo';
+    const parte = (v, esDado) => {
+      if (!multi) return v;
+      if (arriba) return Math.ceil(v / n);
+      return esDado ? Math.max(1, Math.floor(v / n)) : Math.trunc(v / n);
+    };
+    const dadoDe = (x, lv) => pj.pg.modo === 'maximo' ? x.clase.dg : clamp(num(pj.pg.tiradas[x.i + ':' + lv]), 0, x.clase.dg);
+    const cbMulti = multi ? Math.max(...items.map(x => R.bonoCon(x.clase, con))) : 0;
+    items.forEach((x, idx) => {
       const c = x.clase;
       if (tr === 'unica' && x.i !== items[0].i) return;
       let inicio = 1;
-      if (tr === 'dual') inicio = x.entrada.estado === 'Congelada' ? 1 : dual.umbral + 1;
+      if (tr === 'dual') inicio = items.slice(0, idx).reduce((m, y) => Math.max(m, y.nivel), 0) + 1;
       for (let lv = inicio; lv <= x.nivel; lv++) {
         const key = x.i + ':' + lv, origen = `${c.nombre} nv. ${lv}`;
         if (lv <= c.dgNivelMax) {
-          const dado = pj.pg.modo === 'maximo' ? c.dg : clamp(num(pj.pg.tiradas[key]), 0, c.dg);
-          const cb = R.bonoCon(c, con);
-          const parteDado = tr === 'multi' ? Math.ceil(dado / n) : dado;
-          const parteCon = tr === 'multi' ? Math.ceil(cb / n) : cb;
+          const dado = dadoDe(x, lv);
+          const cb = multi ? cbMulti : R.bonoCon(c, con);
+          const parteDado = parte(dado, true), parteCon = parte(cb, false);
           out.push({ key, origen, dado: 'd' + c.dg, tirada: dado, con: parteCon, total: parteDado + parteCon, editable: pj.pg.modo === 'tirada' });
         } else {
-          out.push({ key, origen, dado: 'fijo', tirada: c.pgDespues, con: 0, total: c.pgDespues, editable: false });
+          const fijo = multi && pj.pg.fijosDivididos ? parte(num(c.pgDespues), false) : num(c.pgDespues);
+          out.push({ key, origen, dado: 'fijo', tirada: c.pgDespues, con: 0, total: fijo, editable: false });
         }
       }
     });

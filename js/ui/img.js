@@ -39,7 +39,8 @@
       h('div', { class: 'im-url' }, ui.texto(url, v => { url = v; }, { placeholder: 'o pega una URL https://…', 'aria-label': (o.titulo || 'Imagen') + ': URL', 'data-foco': f + '-url' }),
         ui.boton('Usar URL', () => { const v = A.imagenSegura(url, limite); if (!v || v.startsWith('data:')) { S.aviso('La URL debe empezar con http:// o https://.', true); return; } o.alCambiar(v); }, 'chico', { 'data-foco': f + '-usar' })),
       o.valor ? ui.boton('Quitar', () => o.alCambiar(''), 'chico peligro', { 'data-foco': f + '-quitar' }) : null,
-      h('p', { class: 'meta', text: `Se reduce a ${max} px de lado y se guarda en el personaje. Con URL, la imagen vive fuera y puede desaparecer.` }));
-    return h('div', { class: 'im-campo' }, prev, ctrl);
+      o.compacto ? null : h('p', { class: 'meta', text: `Se reduce a ${max} px de lado y se guarda en el personaje. Con URL, la imagen vive fuera y puede desaparecer.` }));
+    if (o.compacto) ctrl.title = `Se reduce a ${max} px de lado y se guarda en el personaje. Con URL, la imagen vive fuera y puede desaparecer.`;
+    return h('div', { class: 'im-campo' + (o.compacto ? ' im-compacto' : '') }, prev, ctrl);
   };
 })(window.ADND);

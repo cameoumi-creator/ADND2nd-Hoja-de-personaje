@@ -17,6 +17,7 @@
     { id: 'creacion', plural: 'creaciones', titulo: 'Creaciones de Techno', nueva: 'Nueva creación' },
     { id: 'conjuro', plural: 'conjuros', titulo: 'Conjuros', nueva: 'Nuevo conjuro' },
     { id: 'escuelaMagia', plural: 'escuelasMagia', titulo: 'Escuelas de magia', nueva: 'Nueva escuela de magia' },
+    { id: 'esfera', plural: 'esferas', titulo: 'Esferas de sacerdote', nueva: 'Nueva esfera' },
     { id: 'linaje', plural: 'linajes', titulo: 'Linajes de hechicero', nueva: 'Nuevo linaje' },
     { id: 'pacto', plural: 'pactos', titulo: 'Pactos de brujo', nueva: 'Nuevo pacto' },
     { id: 'poderPsi', plural: 'poderesPsi', titulo: 'Poderes psiónicos', nueva: 'Nuevo poder' },
@@ -36,7 +37,7 @@
   const FAMILIAS = [
     { id: 'personaje', t: 'Personaje', tipos: ['raza', 'variante', 'clase', 'kit', 'deidad', 'idioma'] },
     { id: 'combate', t: 'Combate', tipos: ['arma', 'armadura', 'escuela', 'arte', 'creacion'] },
-    { id: 'magia', t: 'Magia', tipos: ['conjuro', 'escuelaMagia', 'linaje', 'pacto'] },
+    { id: 'magia', t: 'Magia', tipos: ['conjuro', 'escuelaMagia', 'esfera', 'linaje', 'pacto'] },
     { id: 'psionica', t: 'Psiónica', tipos: ['poderPsi', 'disciplinaPsi', 'defensaPsi'] },
     { id: 'opcionales', t: 'Reglas opcionales', tipos: ['dote', 'dotesNacimiento', 'magiaSalvaje'] },
     { id: 'equipo', t: 'Equipo y otros', tipos: ['objetoTienda', 'pericia', 'tabla'] }
@@ -60,6 +61,7 @@
     arte: () => ({ id: '', nombre: '', atk: 1, dano: '1d6', ac: -1, met: '', armas: '', movs: [{ k: 'Golpear 1', nombre: '', efecto: '', ca: 0 }] }),
     conjuro: () => ({ id: '', nombre: '', tipo: 'arcano', nv: 1, fuente: 'Homebrew', escuelas: [], esfera: '', rev: false, alcance: '', componentes: 'V,S', duracion: '', tiempo: '1', area: '', salvacion: 'No', efecto: '', material: '', reverso: '' }),
     escuelaMagia: () => ({ id: '', nombre: '', desc: '' }),
+    esfera: () => ({ id: '', nombre: '', desc: '' }),
     linaje: () => ({ id: '', nombre: '', desc: '', habilidades: [1, 6, 12, 18].map(n => ({ nivel: n, nombre: '', texto: '' })), conjuros: Array.from({ length: 9 }, () => []) }),
     poderPsi: S => ({ id: '', nombre: '', disc: (S.reg.disciplinasPsi[0] || {}).nombre || '', tipo: 'devocion', puntuacion: { car: 'SAB', mod: -3 }, puntuacionTxt: '', inicio: '', costo: null, mant: 'n/d', mantenimiento: null, alcance: '', preparacion: '0', area: '', prerrequisitos: [], efecto: '', riesgos: '' }),
     disciplinaPsi: () => ({ id: '', nombre: '' }),
@@ -142,7 +144,7 @@
       if (tipo === 'raza' && b.elecciones && typeof b.elecciones === 'string') throw new Error('Las elecciones no son JSON válido.');
       const limpio = A.sanear[tipo](b);
       const otro = S.reg[t.plural].find(x => x.id !== limpio.id && String(x.nombre).trim().toLowerCase() === limpio.nombre.toLowerCase() && (tipo !== 'kit' || x.clase === limpio.clase) && (tipo !== 'variante' || x.raza === limpio.raza));
-      if (otro) throw new Error(`Ya existe ${tipo === 'kit' ? 'un kit' : tipo === 'deidad' ? 'una deidad' : tipo === 'arma' ? 'un arma' : tipo === 'variante' ? 'una variante' : tipo === 'idioma' ? 'un idioma' : tipo === 'clase' ? 'una clase' : tipo === 'arte' ? 'un arte' : tipo === 'creacion' ? 'una creación' : tipo === 'conjuro' ? 'un conjuro' : tipo === 'escuelaMagia' ? 'una escuela de magia' : tipo === 'linaje' ? 'un linaje' : tipo === 'pacto' ? 'un pacto' : tipo === 'poderPsi' ? 'un poder' : tipo === 'disciplinaPsi' ? 'una disciplina' : tipo === 'defensaPsi' ? 'un modo defensivo' : tipo === 'escuela' ? 'una escuela' : tipo === 'pericia' ? 'una pericia' : tipo === 'armadura' ? 'una armadura' : 'una raza'} con ese nombre.`);
+      if (otro) throw new Error(`Ya existe ${tipo === 'kit' ? 'un kit' : tipo === 'deidad' ? 'una deidad' : tipo === 'arma' ? 'un arma' : tipo === 'variante' ? 'una variante' : tipo === 'idioma' ? 'un idioma' : tipo === 'clase' ? 'una clase' : tipo === 'arte' ? 'un arte' : tipo === 'creacion' ? 'una creación' : tipo === 'conjuro' ? 'un conjuro' : tipo === 'escuelaMagia' ? 'una escuela de magia' : tipo === 'esfera' ? 'una esfera' : tipo === 'linaje' ? 'un linaje' : tipo === 'pacto' ? 'un pacto' : tipo === 'poderPsi' ? 'un poder' : tipo === 'disciplinaPsi' ? 'una disciplina' : tipo === 'defensaPsi' ? 'un modo defensivo' : tipo === 'escuela' ? 'una escuela' : tipo === 'pericia' ? 'una pericia' : tipo === 'armadura' ? 'una armadura' : 'una raza'} con ese nombre.`);
       if (tipo === 'clase') ['thaco', 'salvaciones', 'xp'].forEach(x => { if (!S.reg.tabla(x, limpio[x])) throw new Error(`Elige una tabla de ${TABLAS[x].toLowerCase()}.`); });
       S.cambiarHb(hb => { const l = hb[t.plural], i = l.findIndex(x => x.id === limpio.id); if (i >= 0) l[i] = limpio; else l.push(limpio); });
       sel = { tipo, id: limpio.id, borrador: U.clon(limpio), lectura: false };
@@ -410,6 +412,21 @@
     ];
   }
 
+  /* Esferas de un conjuro divino: se eligen de la lista (base + homebrew), sin escribirlas. */
+  function selectorEsferas(S, b) {
+    if (!Array.isArray(b.esferas)) b.esferas = A.reglas.conjuros ? A.reglas.conjuros.esferasDe(b).slice() : [];
+    const lista = A.listaEsferas(), nombre = id => (lista.find(e => e.id === id) || { nombre: id + ' (ya no existe)' }).nombre;
+    const ops = [{ v: '', t: '— agregar esfera —' }].concat(lista.filter(e => !b.esferas.includes(e.id)).sort((x, y) => x.nombre.localeCompare(y.nombre, 'es')).map(e => ({ v: e.id, t: e.nombre + (e.origen === 'homebrew' ? ' (homebrew)' : '') })));
+    return h('div', { class: 'campo ancho-todo' }, h('span', { class: 'campo-et', text: 'Esferas del conjuro' }),
+      b.esferas.length ? h('div', { class: 'fila-edit' }, b.esferas.map((id, i) => ui.boton(nombre(id) + ' ✕', () => { b.esferas.splice(i, 1); b.esfera = ''; S.render(); }, 'chico', { 'data-foco': 'hb-cj-esfq' + i, title: 'Quitar esfera' }))) : h('p', { class: 'meta', text: 'Sin esferas: el conjuro no estará en la lista de ningún sacerdote.' }),
+      ui.select(ops, '', v => { if (v) { b.esferas.push(v); b.esfera = ''; S.render(); } }, { 'aria-label': 'Agregar esfera', 'data-foco': 'hb-cj-esfadd' }));
+  }
+  function formEsfera(S, b) {
+    return [h('div', { class: 'rejilla g3' }, nombreCampo(b)),
+      ui.campo('Descripción', ui.area(b.desc || '', v => { b.desc = v; }, { rows: 4, 'data-foco': 'hb-es-desc' })),
+      h('p', { class: 'ayuda', text: 'Las esferas nuevas aparecen al crear conjuros divinos, en las deidades y en las esferas de cada sacerdote.' })];
+  }
+
   function formConjuro(S, b) {
     const t = (k, et, extra) => ui.campo(et, ui.texto(b[k] || '', v => { b[k] = v; }, Object.assign({ 'data-foco': 'hb-cj-' + k }, extra || {})));
     b.escuelas = Array.isArray(b.escuelas) ? b.escuelas : [];
@@ -419,7 +436,7 @@
         ui.campo('Tipo', ui.select([{ v: 'arcano', t: 'Arcano (mago, hechicero)' }, { v: 'divino', t: 'Divino (sacerdote)' }], b.tipo, v => { b.tipo = v; S.render(); }, { 'data-foco': 'hb-cj-tipo' })),
         ui.campo('Nivel de conjuro', ui.numero(b.nv, v => { b.nv = U.num(v); }, { min: 1, max: 9, step: 1, 'data-foco': 'hb-cj-nv' }))),
       h('div', { class: 'campo' }, h('span', { class: 'campo-et', text: 'Escuelas de magia (puede tener varias)' }), h('div', { class: 'checks' }, marcas)),
-      h('div', { class: 'rejilla g3' }, b.tipo === 'divino' ? t('esfera', 'Esfera') : null, t('fuente', 'Fuente'),
+      h('div', { class: 'rejilla g3' }, b.tipo === 'divino' ? selectorEsferas(S, b) : null, t('fuente', 'Fuente'),
         h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: !!b.rev, 'data-foco': 'hb-cj-rev', onchange: e => { b.rev = e.target.checked; S.render(); } }), ' Reversible')),
       h('div', { class: 'rejilla g3' }, t('alcance', 'Alcance'), t('componentes', 'Componentes'), t('duracion', 'Duración'), t('tiempo', 'Tiempo de lanzamiento'), t('area', 'Área de efecto'), t('salvacion', 'Salvación')),
       t('material', 'Componente material'),
@@ -497,7 +514,7 @@
       h('p', { class: 'ayuda', text: 'La lista de tu patrón son los conjuros arcanos de sus escuelas, los divinos de sus esferas y los conjuros firma. El brujo solo puede pedir de esa lista.' }),
       h('div', { class: 'campo' }, h('span', { class: 'campo-et', text: 'Escuelas arcanas del patrón' }), h('div', { class: 'checks' }, S.reg.escuelasMagia.map(e => h('label', { class: 'check' },
         h('input', { type: 'checkbox', checked: b.escuelas.includes(e.id), 'data-foco': 'hb-pa-esc-' + e.id, onchange: ev => marcar(b.escuelas, e.id, ev.target.checked) }), ' ' + e.nombre)))),
-      h('div', { class: 'campo' }, h('span', { class: 'campo-et', text: 'Esferas divinas del patrón' }), h('div', { class: 'checks' }, (A.base.esferas || []).map(e => h('label', { class: 'check' },
+      h('div', { class: 'campo' }, h('span', { class: 'campo-et', text: 'Esferas divinas del patrón' }), h('div', { class: 'checks' }, A.listaEsferas().map(e => h('label', { class: 'check' },
         h('input', { type: 'checkbox', checked: b.esferas.includes(e.id), 'data-foco': 'hb-pa-esf-' + e.id, onchange: ev => marcar(b.esferas, e.id, ev.target.checked) }), ' ' + e.nombre)))),
       h('h3', { text: 'Conjuros firma' }),
       b.firma.length ? h('ul', { class: 'cj-lista' }, b.firma.map((id, i) => h('li', { class: 'cj-mem' }, h('span', { class: 'crece', text: (S.reg.conjuro(id) || { nombre: id + ' (ya no existe)' }).nombre }),
@@ -598,7 +615,7 @@
   function formDeidad(S, b) {
     const e = b.esferas = b.esferas && typeof b.esferas === 'object' ? b.esferas : { mayores: [], menores: [] };
     e.mayores = e.mayores || []; e.menores = e.menores || [];
-    const marcas = cual => h('div', { class: 'checks' }, (A.base.esferas || []).map(x => h('label', { class: 'check' },
+    const marcas = cual => h('div', { class: 'checks' }, A.listaEsferas().map(x => h('label', { class: 'check' },
       h('input', { type: 'checkbox', checked: e[cual].includes(x.id), 'data-foco': `hb-di-${cual}-${x.id}`, onchange: ev => {
         const otro = cual === 'mayores' ? 'menores' : 'mayores';
         e[cual] = e[cual].filter(i => i !== x.id); if (ev.target.checked) { e[cual].push(x.id); e[otro] = e[otro].filter(i => i !== x.id); S.render(); }
@@ -651,7 +668,7 @@
       ui.area(b.mitTxt, v => { b.mitTxt = v; }, { rows: 8, class: 'codigo', 'data-foco': 'hb-dn-mit', spellcheck: 'false', 'aria-label': 'Mitologías de ascendencia' })];
   }
 
-  const formularios = { dote: formDote, dotesNacimiento: formDotesNacimiento, magiaSalvaje: formMagiaSalvaje, raza: formRaza, clase: formClase, kit: formKit, deidad: formDeidad, idioma: formIdioma, arma: formArma, armadura: formArmadura, objetoTienda: formObjetoTienda, pericia: formPericia, escuela: formEscuela, arte: formArte, creacion: formCreacion, conjuro: formConjuro, escuelaMagia: formEscuelaMagia, linaje: formLinaje, pacto: formPacto, poderPsi: formPoderPsi, disciplinaPsi: formDisciplinaPsi, defensaPsi: formDefensaPsi, variante: formVariante, tabla: formTabla };
+  const formularios = { dote: formDote, dotesNacimiento: formDotesNacimiento, magiaSalvaje: formMagiaSalvaje, raza: formRaza, clase: formClase, kit: formKit, deidad: formDeidad, esfera: formEsfera, idioma: formIdioma, arma: formArma, armadura: formArmadura, objetoTienda: formObjetoTienda, pericia: formPericia, escuela: formEscuela, arte: formArte, creacion: formCreacion, conjuro: formConjuro, escuelaMagia: formEscuelaMagia, linaje: formLinaje, pacto: formPacto, poderPsi: formPoderPsi, disciplinaPsi: formDisciplinaPsi, defensaPsi: formDefensaPsi, variante: formVariante, tabla: formTabla };
 
   /* ---------------------------------------------------------------- listas y panel */
   function lista(S, t) {
@@ -732,7 +749,7 @@
           try {
             const nuevo = A.sanear.paquete(JSON.parse(json.value));
             if (!confirm('Esto reemplaza toda tu biblioteca homebrew. ¿Continuar?')) return;
-            S.cambiarHb(hb => { hb.razas = nuevo.razas; hb.clases = nuevo.clases; hb.kits = nuevo.kits; hb.deidades = nuevo.deidades; hb.armas = nuevo.armas; hb.armaduras = nuevo.armaduras; hb.pericias = nuevo.pericias; hb.escuelas = nuevo.escuelas; hb.artes = nuevo.artes; hb.creaciones = nuevo.creaciones; hb.conjuros = nuevo.conjuros; hb.escuelasMagia = nuevo.escuelasMagia; hb.linajes = nuevo.linajes; hb.pactos = nuevo.pactos; hb.poderesPsi = nuevo.poderesPsi; hb.disciplinasPsi = nuevo.disciplinasPsi; hb.defensasPsi = nuevo.defensasPsi; hb.magiaSalvaje = nuevo.magiaSalvaje; hb.dotes = nuevo.dotes; hb.dotesNacimiento = nuevo.dotesNacimiento; hb.objetosTienda = nuevo.objetosTienda; hb.variantes = nuevo.variantes; hb.idiomas = nuevo.idiomas; hb.tablas = nuevo.tablas; });
+            S.cambiarHb(hb => { hb.razas = nuevo.razas; hb.clases = nuevo.clases; hb.kits = nuevo.kits; hb.deidades = nuevo.deidades; hb.armas = nuevo.armas; hb.armaduras = nuevo.armaduras; hb.pericias = nuevo.pericias; hb.escuelas = nuevo.escuelas; hb.artes = nuevo.artes; hb.creaciones = nuevo.creaciones; hb.conjuros = nuevo.conjuros; hb.escuelasMagia = nuevo.escuelasMagia; hb.esferas = nuevo.esferas; hb.linajes = nuevo.linajes; hb.pactos = nuevo.pactos; hb.poderesPsi = nuevo.poderesPsi; hb.disciplinasPsi = nuevo.disciplinasPsi; hb.defensasPsi = nuevo.defensasPsi; hb.magiaSalvaje = nuevo.magiaSalvaje; hb.dotes = nuevo.dotes; hb.dotesNacimiento = nuevo.dotesNacimiento; hb.objetosTienda = nuevo.objetosTienda; hb.variantes = nuevo.variantes; hb.idiomas = nuevo.idiomas; hb.tablas = nuevo.tablas; });
             sel = null; S.render(); S.aviso('Biblioteca reemplazada.');
           } catch (e) { msg.textContent = 'No es JSON válido: ' + e.message; }
         }), msg));

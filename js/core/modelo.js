@@ -19,7 +19,7 @@
       trayectoria: 'unica',
       clases: [{ clase: 'guerrero', kit: '', estado: 'Activa', modo: 'auto', nivel: 1, xp: 0 }],
       bonoXp: 0,
-      pg: { modo: 'maximo', tiradas: {}, extra: [], actual: null },
+      pg: { modo: 'maximo', tiradas: {}, extra: [], actual: null, redondeo: 'arriba', fijosDivididos: false },
       bonos,
       pericias: { noArmas: {}, flex: { pa: 0, pna: 0 }, ambidestria: { comprada: false, reserva: 'PA' }, armas: [], otras: [] },
       idiomas: { aprendidos: [] },
@@ -108,10 +108,9 @@
     c = c && typeof c === 'object' ? c : {}; const m = c.mago && typeof c.mago === 'object' ? c.mago : {}, h = c.hechicero && typeof c.hechicero === 'object' ? c.hechicero : {};
     const ids = l => [...new Set((Array.isArray(l) ? l : []).map(String).filter(Boolean))].slice(0, 400);
     const mapaNiv = (o, mn, mx) => { const r = {}; for (let n = 1; n <= 9; n++) { const v = Math.max(mn, Math.min(mx, Math.round(U.num(o && o[n])))); if (v) r[n] = v; } return r; };
-    const esferasValidas = new Set((A.base.esferas || []).map(e => e.id));
     const lanzador = x => {
       x = x && typeof x === 'object' ? x : {}; const e = x.esferas && typeof x.esferas === 'object' ? x.esferas : {};
-      const may = ids(e.mayores).filter(i => esferasValidas.has(i)), men = ids(e.menores).filter(i => esferasValidas.has(i) && !may.includes(i));
+      const may = ids(e.mayores).filter(i => A.esferaValida(i)), men = ids(e.menores).filter(i => A.esferaValida(i) && !may.includes(i));
       return {
         modo: x.modo === 'puntos' ? 'puntos' : 'memorizar', gastados: Math.max(0, Math.round(U.num(x.gastados))), bonoPuntos: Math.max(-99, Math.min(99, Math.round(U.num(x.bonoPuntos)))),
         extraEspacios: mapaNiv(x.extraEspacios, -9, 9), motivo: String(x.motivo || '').slice(0, 300), libro: ids(x.libro),
@@ -285,6 +284,7 @@
     o.pg = Object.assign({}, base.pg, o.pg);
     if (!['maximo', 'tirada'].includes(o.pg.modo)) o.pg.modo = 'maximo';
     o.pg.tiradas = Object.assign({}, o.pg.tiradas);
+    o.pg.redondeo = o.pg.redondeo === 'abajo' ? 'abajo' : 'arriba'; o.pg.fijosDivididos = !!o.pg.fijosDivididos;
     o.pg.extra = (Array.isArray(o.pg.extra) ? o.pg.extra : []).map(e => ({ origen: String(e.origen || ''), total: U.num(e.total) }));
     const bonos = {};
     Object.keys(A.OBJETIVOS).forEach(k => {

@@ -11,13 +11,13 @@
   function lanzadores(S) {
     const r = S.r, c = r.conjuros, out = [];
     const agrupa = lista => { const o = {}; lista.filter(sp => sp && !sp.faltante && sp.nv >= 1).forEach(sp => { (o[sp.nv] = o[sp.nv] || []).push(sp); }); Object.values(o).forEach(l => l.sort(porNombre)); return o; };
-    if (c.mago.activo) out.push({ nombre: 'Mago', nivel: c.mago.nivel, espacios: c.mago.espacios, por: agrupa(c.mago.libro), tipo: 'Libro de conjuros' });
-    if (c.hechicero.activo) {
+    if (c.mago.activo && c.mago.nivel > 0) out.push({ nombre: 'Mago', nivel: c.mago.nivel, espacios: c.mago.espacios, por: agrupa(c.mago.libro), tipo: 'Libro de conjuros' });
+    if (c.hechicero.activo && c.hechicero.nivel > 0) {
       const sp = c.hechicero.niveles.flatMap(n => n.destinados.concat(n.elegidos).map(x => x.sp));
       out.push({ nombre: 'Hechicero', nivel: c.hechicero.nivel, espacios: null, maximos: c.hechicero.niveles.map(n => n.maximo), por: agrupa(sp), tipo: 'Conjuros conocidos' });
     }
-    if (c.brujo && c.brujo.activo) out.push({ nombre: 'Brujo', nivel: c.brujo.nivel, espacios: c.brujo.espacios, por: agrupa(c.brujo.conocidos), tipo: 'Conjuros concedidos' });
-    Object.values(c.clases).filter(x => x.activo && x.top > 0).forEach(x => {
+    if (c.brujo && c.brujo.activo && c.brujo.nivel > 0) out.push({ nombre: 'Brujo', nivel: c.brujo.nivel, espacios: c.brujo.espacios, por: agrupa(c.brujo.conocidos), tipo: 'Conjuros concedidos' });
+    Object.values(c.clases).filter(x => x.activo && x.nivel > 0 && x.top > 0).forEach(x => {
       if (x.libroPropio) out.push({ nombre: x.nombre, nivel: x.nivel, espacios: x.espacios, por: agrupa(x.libro), tipo: 'Conjuros conocidos' });
       else if (x.tipo === 'divino' && x.acceso) out.push({ nombre: x.nombre, nivel: x.nivel, espacios: x.espacios, por: agrupa(S.reg.conjuros.filter(sp => CJ.enAcceso(sp, x.acceso, x.top))), tipo: 'Conjuros de tus esferas' });
     });

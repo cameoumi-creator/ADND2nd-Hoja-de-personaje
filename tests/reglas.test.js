@@ -979,5 +979,42 @@ igual('catálogo: lanza arrojadiza', reg.arma('armas-de-proyectiles-lanza').nomb
   igual('mov: se sanea', [A.sanear.raza({ nombre: 'V', mov: 15 }).mov, A.sanear.raza({ nombre: 'V' }).mov, A.sanear.clase({ nombre: 'X', mov: 99 }).mov], [15, undefined, 60]);
 }
 
+// PG en multiclase y dual (regla de la mesa: redondeo arriba por defecto; opción PHB abajo)
+{
+  const multi = (red, fijos) => { const p = A.nuevoPersonaje(); p.trayectoria = 'multi'; p.caracteristicas.CON = '17'; p.pg.redondeo = red; p.pg.fijosDivididos = !!fijos;
+    p.clases = [{ clase: 'guerrero', kit: '', modo: 'manual', nivel: 3, xp: 0, estado: 'Activa' }, { clase: 'mago', kit: '', modo: 'manual', nivel: 3, xp: 0, estado: 'Activa' }]; return A.reglas.resumen(p, reg).pg; };
+  igual('pg multi: redondeo arriba', multi('arriba').clases, 33);
+  igual('pg multi: redondeo abajo (PHB)', multi('abajo').clases, 27);
+  igual('pg multi: por defecto arriba', A.nuevoPersonaje().pg.redondeo, 'arriba');
+  const dual = () => { const p = A.nuevoPersonaje(); p.trayectoria = 'dual'; p.caracteristicas.CON = '18';
+    p.clases = [['guerrero', 13], ['mago', 20], ['sacerdote', 21], ['psionico', 22]].map(([c, n], i) => ({ clase: c, kit: '', modo: 'manual', nivel: n, xp: 0, estado: i === 3 ? 'Activa' : 'Congelada' })); return A.reglas.resumen(p, reg).pg; };
+  igual('pg dual encadenado: 138 + 7 + 2 + 2', dual().clases, 149);
+}
+
+// Armadura: el bono mágico de piezas y equipo se refleja en la CA y en el resumen
+{
+  const p = A.nuevoPersonaje(); p.armadura.torso.tipo = 'acolchada'; p.armadura.torso.magico = 4; p.armadura.equipo.head = { nombre: 'Tiara', ca: 0, magico: 1, desc: '' };
+  const c = A.reglas.resumen(p, reg).ca;
+  igual('armadura: magia de piezas y equipo', [c.magia, c.equipoMag, c.piezas[0].magico], [4, 1, 4]);
+}
+
+// Esferas homebrew: se crean, se eligen en conjuros divinos y dan acceso a los sacerdotes
+{
+  const hb = A.sanear.paquete({ formato: A.PAQUETE, esferas: [{ id: 'hb-esfera-lunar', nombre: 'Lunar', desc: 'x' }],
+    conjuros: [{ id: 'hb-cj-rayo', nombre: 'Rayo lunar', tipo: 'divino', nv: 2, esferas: ['hb-esfera-lunar', 'adivinacion', 'no-existe'] }],
+    deidades: [{ id: 'hb-d1', nombre: 'Selene', esferas: { mayores: ['hb-esfera-lunar'], menores: [] } }] });
+  const reg3 = A.crearRegistro(hb), sp = reg3.conjuro('hb-cj-rayo'), CJ = A.reglas.conjuros;
+  igual('esfera homebrew: está en el registro', reg3.esferas.some(e => e.id === 'hb-esfera-lunar' && e.origen === 'homebrew'), true);
+  igual('conjuro: esferas válidas (sin inventadas)', CJ.esferasDe(sp), ['hb-esfera-lunar', 'adivinacion']);
+  igual('esfera homebrew: nombre', CJ.nombreEsfera('hb-esfera-lunar'), 'Lunar');
+  igual('deidad conserva la esfera homebrew', reg3.deidad('hb-d1').esferas.mayores, ['hb-esfera-lunar']);
+  igual('acceso por esfera homebrew', CJ.enAcceso(sp, { mayores: ['hb-esfera-lunar'], menores: [] }, 9), true);
+  igual('sin esfera no hay acceso', CJ.enAcceso(sp, { mayores: ['animal'], menores: [] }, 9), false);
+  const p = A.nuevoPersonaje(); p.conjuros.clases.sacerdote.esferas.mayores = ['hb-esfera-lunar'];
+  igual('modelo: la esfera homebrew sobrevive al normalizar', A.normalizarPersonaje(JSON.parse(JSON.stringify(p))).conjuros.clases.sacerdote.esferas.mayores, ['hb-esfera-lunar']);
+  igual('paquete de personaje incluye la esfera usada', A.hbUsadoPor(p, hb).esferas.map(e => e.id), ['hb-esfera-lunar']);
+  A.crearRegistro();
+}
+
 console.log(`${ok} correctas, ${mal} fallidas`);
 process.exit(mal ? 1 : 0);
